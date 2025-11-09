@@ -51,6 +51,7 @@ def init_db():
             blood_pressure_sys INTEGER,
             blood_pressure_dia INTEGER,
             glucose_level REAL,
+            meals TEXT,
             notes TEXT,
             source TEXT,
             sync_date TEXT,
@@ -59,6 +60,17 @@ def init_db():
     ''')
     
     conn.commit()
+    # Ensure 'meals' column exists (migration for older DBs)
+    try:
+        c.execute("PRAGMA table_info(health_records)")
+        cols = [row[1] for row in c.fetchall()]
+        if 'meals' not in cols:
+            c.execute("ALTER TABLE health_records ADD COLUMN meals TEXT")
+            conn.commit()
+    except Exception:
+        # If anything goes wrong with migration, ignore and continue
+        pass
+
     conn.close()
 
 # Initialize database
@@ -86,15 +98,23 @@ def sync_data():
         source_device = data.get("device_id", "unknown")
         
         for record in data["records"]:
+            # Normalize meals field: accept dict or JSON string or missing
+            meals = record.get('meals') or record.get('meals_data') or record.get('meals_data_json')
+            try:
+                meals_json = json.dumps(meals) if meals is not None else None
+            except Exception:
+                # If meals already a JSON string, keep as is
+                meals_json = meals if isinstance(meals, str) else None
+
             c.execute('''
                 INSERT INTO health_records 
                 (user_id, date, weight, blood_pressure_sys, blood_pressure_dia,
-                 glucose_level, notes, source, sync_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 glucose_level, meals, notes, source, sync_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                user_id, record["date"], record["weight"],
-                record["blood_pressure_sys"], record["blood_pressure_dia"],
-                record["glucose_level"], record.get("notes", ""),
+                user_id, record.get("date"), record.get("weight"),
+                record.get("blood_pressure_sys"), record.get("blood_pressure_dia"),
+                record.get("glucose_level"), meals_json, record.get("notes", ""),
                 source_device, sync_date
             ))
         
@@ -115,13 +135,15 @@ def generate_plots(user_id):
         
         # Get user records
         query = '''
-            SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level
+            SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level, meals
             FROM health_records
             WHERE user_id = ?
             ORDER BY date
         '''
         
         data = pd.read_sql_query(query, conn, params=(user_id,))
+
+        print(data.head())
         
         if data.empty:
             return jsonify({"error": "No records found"}), 404
@@ -129,9 +151,35 @@ def generate_plots(user_id):
         # Generate plots
         plots = {}
         
-        # Weight over time
-        fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-        plots["weight"] = fig_weight.to_json()
+        # Weight over time: use the last measurement of each day
+        try:
+            data['date'] = pd.to_datetime(data['date'])
+            # ensure weight is numeric and drop invalid/zero values before aggregating
+            data['weight'] = pd.to_numeric(data['weight'], errors='coerce')
+            data = data.sort_values('date')
+            data['date_only'] = data['date'].dt.date.astype(str)
+            # drop rows without a valid positive weight to avoid plotting 0 or NaN
+            valid_weights = data.dropna(subset=['weight'])
+            valid_weights = valid_weights[valid_weights['weight'] > 0]
+            if not valid_weights.empty:
+                daily_weight = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
+                print('Daily weight data:\n', daily_weight.head())
+                fig_weight = px.line(daily_weight, x='date_only', y='weight', title='Weight Over Time')
+                fig_weight.update_traces(mode='lines+markers')
+                fig_weight.update_layout(yaxis_title='Peso (kg)')
+                plots['weight'] = fig_weight.to_json()
+            else:
+                # fallback to raw data if no valid weights
+                fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
+                fig_weight.update_traces(mode='lines+markers')
+                fig_weight.update_layout(yaxis_title='Peso (kg)')
+                plots["weight"] = fig_weight.to_json()
+        except Exception as e:
+            # fallback to raw plot if anything goes wrong
+            fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
+            fig_weight.update_traces(mode='lines+markers')
+            fig_weight.update_layout(yaxis_title='Peso (kg)')
+            plots["weight"] = fig_weight.to_json()
         
         # Blood pressure
         fig_bp = go.Figure()
@@ -146,6 +194,61 @@ def generate_plots(user_id):
         fig_glucose = px.line(data, x="date", y="glucose_level",
                              title="Glucose Levels Over Time")
         plots["glucose"] = fig_glucose.to_json()
+
+        # Parse meals (stored as JSON text) and create aggregated dataframes
+        try:
+            # Ensure meals column exists
+            if 'meals' in data.columns:
+                # Build per-day-per-meal summed grams (protein+carbs+fat)
+                meal_rows = []
+                macro_rows = {}
+
+                for idx, row in data.iterrows():
+                    date = str(row['date']).split(' ')[0]
+                    meals_cell = row.get('meals')
+                    if not meals_cell or pd.isna(meals_cell):
+                        continue
+                    try:
+                        meals = json.loads(meals_cell) if isinstance(meals_cell, str) else meals_cell
+                    except Exception:
+                        meals = meals_cell
+
+                    # Initialize macro totals for the day
+                    if date not in macro_rows:
+                        macro_rows[date] = {'date': date, 'protein': 0, 'carbs': 0, 'fat': 0}
+
+                    for meal_name, meal_data in (meals.items() if isinstance(meals, dict) else []):
+                        if not isinstance(meal_data, dict):
+                            continue
+                        p = float(meal_data.get('protein', 0) or 0)
+                        c = float(meal_data.get('carbs', 0) or 0)
+                        f = float(meal_data.get('fat', 0) or 0)
+                        total_grams = p + c + f
+                        meal_rows.append({'date': date, 'meal': meal_name, 'grams': total_grams, 'protein': p, 'carbs': c, 'fat': f})
+
+                        # accumulate per-day macros
+                        macro_rows[date]['protein'] += p
+                        macro_rows[date]['carbs'] += c
+                        macro_rows[date]['fat'] += f
+
+                if meal_rows:
+                    meals_df = pd.DataFrame(meal_rows)
+                    # Plot: grams per day by meal (stacked/grouped)
+                    fig_meals = px.bar(meals_df, x='date', y='grams', color='meal', title='Por día / Comida (g totales)')
+                    plots['meals_by_day'] = fig_meals.to_json()
+
+                if macro_rows:
+                    macro_df = pd.DataFrame(list(macro_rows.values())).sort_values('date')
+                    # Plot: macronutrients over time (each nutrient as a separate line)
+                    fig_macros = go.Figure()
+                    fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['protein'], name='Proteínas (g)'))
+                    fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['carbs'], name='Carbohidratos (g)'))
+                    fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['fat'], name='Grasas (g)'))
+                    fig_macros.update_layout(barmode='stack', title='Macronutrientes por día (g)')
+                    plots['macros_by_day'] = fig_macros.to_json()
+        except Exception as e:
+            # don't fail entire request if meal parsing/plotting fails
+            plots['meals_by_day_error'] = str(e)
         
         return jsonify(plots)
     except Exception as e:
@@ -323,7 +426,7 @@ def get_health_data():
         # Get all health data
         c.execute('''
             SELECT u.name, u.email, u.phone, h.date, h.weight, 
-                   h.blood_pressure_sys, h.blood_pressure_dia, h.glucose_level
+                   h.blood_pressure_sys, h.blood_pressure_dia, h.glucose_level, h.meals
             FROM users u
             JOIN health_records h ON u.id = h.user_id
         ''')
@@ -332,15 +435,36 @@ def get_health_data():
         
         # Convert to DataFrame
         columns = ['name', 'email', 'phone', 'date', 'weight', 
-                   'blood_pressure_sys', 'blood_pressure_dia', 'glucose_level']
+                   'blood_pressure_sys', 'blood_pressure_dia', 'glucose_level', 'meals']
         df = pd.DataFrame(data, columns=columns)
         
         # Generate basic plots
         plots = {}
         if not df.empty:
-            # Weight plot
-            fig_weight = px.line(df, x='date', y='weight', title='Weight Over Time')
-            plots['weight'] = fig_weight.to_json()
+            # Weight plot (last measurement per day)
+            try:
+                df['date'] = pd.to_datetime(df['date'])
+                df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
+                df = df.sort_values('date')
+                df['date_only'] = df['date'].dt.date.astype(str)
+                valid_weights = df.dropna(subset=['weight'])
+                valid_weights = valid_weights[valid_weights['weight'] > 0]
+                if not valid_weights.empty:
+                    daily_df = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
+                    fig_weight = px.line(daily_df, x='date_only', y='weight', title='Weight Over Time')
+                    fig_weight.update_traces(mode='lines+markers')
+                    fig_weight.update_layout(yaxis_title='Peso (kg)')
+                    plots['weight'] = fig_weight.to_json()
+                else:
+                    fig_weight = px.line(df, x='date', y='weight', title='Weight Over Time')
+                    fig_weight.update_traces(mode='lines+markers')
+                    fig_weight.update_layout(yaxis_title='Peso (kg)')
+                    plots['weight'] = fig_weight.to_json()
+            except Exception:
+                fig_weight = px.line(df, x='date', y='weight', title='Weight Over Time')
+                fig_weight.update_traces(mode='lines+markers')
+                fig_weight.update_layout(yaxis_title='Peso (kg)')
+                plots['weight'] = fig_weight.to_json()
             
             # Blood pressure plot
             fig_bp = px.line(df, x='date', y=['blood_pressure_sys', 'blood_pressure_dia'], 
@@ -351,6 +475,14 @@ def get_health_data():
             fig_glucose = px.line(df, x='date', y='glucose_level',
                                 title='Glucose Levels Over Time')
             plots['glucose'] = fig_glucose.to_json()
+            # Parse meals JSON into dicts for the API response
+            if 'meals' in df.columns:
+                def parse_meals_cell(x):
+                    try:
+                        return json.loads(x) if isinstance(x, str) and x else x
+                    except Exception:
+                        return x
+                df['meals'] = df['meals'].apply(parse_meals_cell)
         
         return jsonify({
             'status': 'success',

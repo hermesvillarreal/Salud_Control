@@ -72,6 +72,16 @@
             <div id="glucose-chart"></div>
         </div>
 
+        <div class="chart">
+            <h2>Por día / Comida (g totales)</h2>
+            <div id="meals-by-day-chart"></div>
+        </div>
+
+        <div class="chart">
+            <h2>Macronutrientes por día (g)</h2>
+            <div id="macros-by-day-chart"></div>
+        </div>
+
         <div id="analysis-section">
             <h2>Análisis de Datos</h2>
             <div id="analysis-content">
@@ -84,13 +94,17 @@
         // Función para cargar los datos iniciales
         async function loadData() {
             try {
-                const response = await fetch('/health_data');
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    updateStats(data.data);
-                    updatePlots(data.plots);
+                // Obtener estadísticas generales y últimos registros
+                const respStats = await fetch('/health_data');
+                const statsData = await respStats.json();
+                if (statsData.status === 'success') {
+                    updateStats(statsData.data);
                 }
+
+                // Obtener las gráficas generadas para user_id = 1
+                const respPlots = await fetch('/generate_plots/1');
+                const plots = await respPlots.json();
+                updatePlots(plots);
             } catch (error) {
                 console.error('Error loading data:', error);
             }
@@ -128,6 +142,20 @@
             }
             if (plots.glucose) {
                 Plotly.newPlot('glucose-chart', JSON.parse(plots.glucose));
+            }
+            if (plots.meals_by_day) {
+                try {
+                    Plotly.newPlot('meals-by-day-chart', JSON.parse(plots.meals_by_day));
+                } catch (e) {
+                    console.warn('No se pudo renderizar meals_by_day:', e);
+                }
+            }
+            if (plots.macros_by_day) {
+                try {
+                    Plotly.newPlot('macros-by-day-chart', JSON.parse(plots.macros_by_day));
+                } catch (e) {
+                    console.warn('No se pudo renderizar macros_by_day:', e);
+                }
             }
         }
 
