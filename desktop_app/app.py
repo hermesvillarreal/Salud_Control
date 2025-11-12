@@ -163,36 +163,55 @@ def generate_plots(user_id):
             valid_weights = valid_weights[valid_weights['weight'] > 0]
             if not valid_weights.empty:
                 daily_weight = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
-                print('Daily weight data:\n', daily_weight.head())
+                print('Daily weight data:\n', daily_weight)
                 fig_weight = px.line(daily_weight, x='date_only', y='weight', title='Weight Over Time')
-                fig_weight.update_traces(mode='lines+markers')
+                #fig_weight.update_traces(mode='lines+markers')
                 fig_weight.update_layout(yaxis_title='Peso (kg)')
                 plots['weight'] = fig_weight.to_json()
             else:
                 # fallback to raw data if no valid weights
                 fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-                fig_weight.update_traces(mode='lines+markers')
+                #fig_weight.update_traces(mode='lines+markers')
                 fig_weight.update_layout(yaxis_title='Peso (kg)')
                 plots["weight"] = fig_weight.to_json()
         except Exception as e:
             # fallback to raw plot if anything goes wrong
             fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-            fig_weight.update_traces(mode='lines+markers')
+            #fig_weight.update_traces(mode='lines+markers')
             fig_weight.update_layout(yaxis_title='Peso (kg)')
             plots["weight"] = fig_weight.to_json()
         
+        valid_sys = data.dropna(subset=['blood_pressure_sys']).reset_index(drop=True)
+        valid_sys = valid_sys[valid_sys['blood_pressure_sys'] > 0].reset_index(drop=True)
+        valid_sys['blood_pressure_sys'] = pd.to_numeric(valid_sys['blood_pressure_sys'], errors='coerce')
+        valid_sys = valid_sys.dropna(subset=['blood_pressure_sys']).reset_index(drop=True)
+    
+        print('Daily Systolic data:\n', valid_sys[['date', 'blood_pressure_sys']])
+
+        valid_dia = data.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
+        valid_dia = valid_dia[valid_dia['blood_pressure_dia'] > 0].reset_index(drop=True)
+        valid_dia['blood_pressure_dia'] = pd.to_numeric(valid_dia['blood_pressure_dia'], errors='coerce')
+        valid_dia = valid_dia.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
+
+        print('Daily Diastolic data:\n', valid_dia[['date', 'blood_pressure_dia']])
+
         # Blood pressure
         fig_bp = go.Figure()
-        fig_bp.add_trace(go.Scatter(x=data["date"], y=data["blood_pressure_sys"],
-                                   name="Systolic"))
-        fig_bp.add_trace(go.Scatter(x=data["date"], y=data["blood_pressure_dia"],
-                                   name="Diastolic"))
-        fig_bp.update_layout(title="Blood Pressure Over Time")
+        fig_bp.add_trace(go.Scatter(x=valid_sys["date"].values, y=valid_sys["blood_pressure_sys"].values, name="Sistólica", mode='lines+markers'))
+        fig_bp.add_trace(go.Scatter(x=valid_dia["date"].values, y=valid_dia["blood_pressure_dia"].values, name="Diastólica", mode='lines+markers'))
+        fig_bp.update_layout(title="Blood Pressure Over Time", yaxis_title='Presión (mmHg)')
         plots["blood_pressure"] = fig_bp.to_json()
         
         # Glucose levels
-        fig_glucose = px.line(data, x="date", y="glucose_level",
-                             title="Glucose Levels Over Time")
+        valid_glu = data.dropna(subset=['glucose_level']).reset_index(drop=True)
+        valid_glu = valid_glu[valid_glu['glucose_level'] > 0].reset_index(drop=True)
+        valid_glu['glucose_level'] = pd.to_numeric(valid_glu['glucose_level'], errors='coerce')
+
+        print('Daily Glucose data:\n', valid_glu[['date', 'glucose_level']])
+
+        fig_glucose = px.line(valid_glu, x="date", y="glucose_level", title="Glucose Levels Over Time")
+        fig_glucose.update_traces(mode='lines+markers')
+        fig_glucose.update_layout(yaxis_title='Glucosa (mg/dL)')
         plots["glucose"] = fig_glucose.to_json()
 
         # Parse meals (stored as JSON text) and create aggregated dataframes
