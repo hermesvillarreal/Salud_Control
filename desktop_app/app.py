@@ -6,8 +6,11 @@ import plotly.graph_objects as go
 from dotenv import load_dotenv
 import os
 import openai
-import sqlite3
 import json
+from database import SessionLocal, engine
+from models import Base, User, HealthRecord
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -28,54 +31,9 @@ def index():
 def service_worker():
     return app.send_static_file('service-worker.js')
 
-# Database configuration
-DB_PATH = os.getenv('DESKTOP_DB_PATH', 'desktop_health.db')
-
+# Database initialization
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    # Create users table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            phone TEXT
-        )
-    ''')
-    
-    # Create health_records table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS health_records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            date TEXT NOT NULL,
-            weight REAL,
-            blood_pressure_sys INTEGER,
-            blood_pressure_dia INTEGER,
-            glucose_level REAL,
-            meals TEXT,
-            notes TEXT,
-            source TEXT,
-            sync_date TEXT,
-            FOREIGN KEY (user_id) REFERENCES users (id)
-        )
-    ''')
-    
-    conn.commit()
-    # Ensure 'meals' column exists (migration for older DBs)
-    try:
-        c.execute("PRAGMA table_info(health_records)")
-        cols = [row[1] for row in c.fetchall()]
-        if 'meals' not in cols:
-            c.execute("ALTER TABLE health_records ADD COLUMN meals TEXT")
-            conn.commit()
-    except Exception:
-        # If anything goes wrong with migration, ignore and continue
-        pass
-
-    conn.close()
+    Base.metadata.create_all(bind=engine)
 
 # Initialize database
 init_db()
@@ -83,19 +41,16 @@ init_db()
 @app.route("/sync_data", methods=["POST"])
 def sync_data():
     data = request.json
+    db = SessionLocal()
     
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
         # Create or get user
-        try:
-            c.execute('INSERT INTO users (name, email, phone) VALUES (?, ?, ?)',
-                     (data["name"], data["email"], data["phone"]))
-            user_id = c.lastrowid
-        except sqlite3.IntegrityError:
-            c.execute('SELECT id FROM users WHERE email = ?', (data["email"],))
-            user_id = c.fetchone()[0]
+        user = db.query(User).filter(User.email == data["email"]).first()
+        if not user:
+            user = User(name=data["name"], email=data["email"], phone=data.get("phone"))
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         
         # Add health records
         sync_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -110,27 +65,27 @@ def sync_data():
                 # If meals already a JSON string, keep as is
                 meals_json = meals if isinstance(meals, str) else None
 
-            c.execute('''
-                INSERT INTO health_records 
-                (user_id, date, weight, blood_pressure_sys, blood_pressure_dia,
-                 glucose_level, meals, notes, source, sync_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                user_id, record.get("date"), record.get("weight"),
-                record.get("blood_pressure_sys"), record.get("blood_pressure_dia"),
-                record.get("glucose_level"), meals_json, record.get("notes", ""),
-                source_device, sync_date
-            ))
+            new_record = HealthRecord(
+                user_id=user.id,
+                date=record.get("date"),
+                weight=record.get("weight"),
+                blood_pressure_sys=record.get("blood_pressure_sys"),
+                blood_pressure_dia=record.get("blood_pressure_dia"),
+                glucose_level=record.get("glucose_level"),
+                meals=meals_json,
+                notes=record.get("notes", ""),
+                source=source_device,
+                sync_date=sync_date
+            )
+            db.add(new_record)
         
-        conn.commit()
-        return jsonify({"status": "success", "user_id": user_id})
+        db.commit()
+        return jsonify({"status": "success", "user_id": user.id})
     except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
+        db.rollback()
         return jsonify({"status": "error", "message": str(e)}), 400
     finally:
-        if 'conn' in locals():
-            conn.close()
+        db.close()
 
 @app.route('/add_record', methods=['GET', 'POST'])
 def add_record():
@@ -139,62 +94,48 @@ def add_record():
     
     if request.method == 'POST':
         data = request.json
+        db = SessionLocal()
         try:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            
             # Ensure user exists (default user for PWA)
             user_id = 1
-            c.execute('SELECT id FROM users WHERE id = ?', (user_id,))
-            if not c.fetchone():
-                c.execute('INSERT INTO users (id, name, email) VALUES (?, ?, ?)', 
-                         (1, "Usuario Principal", "usuario@example.com"))
-                conn.commit()
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                user = User(id=1, name="Usuario Principal", email="usuario@example.com")
+                db.add(user)
+                db.commit()
 
             # Prepare meals JSON
             meals_json = json.dumps(data.get('meals', {}))
             
-            c.execute('''
-                INSERT INTO health_records 
-                (user_id, date, weight, blood_pressure_sys, blood_pressure_dia,
-                 glucose_level, meals, notes, source, sync_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                user_id,
-                data.get('date'),
-                data.get('weight'),
-                data.get('blood_pressure_sys'),
-                data.get('blood_pressure_dia'),
-                data.get('glucose_level'),
-                meals_json,
-                data.get('notes', ''),
-                'web_pwa',
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            ))
-            
-            conn.commit()
+            new_record = HealthRecord(
+                user_id=user_id,
+                date=data.get('date'),
+                weight=data.get('weight'),
+                blood_pressure_sys=data.get('blood_pressure_sys'),
+                blood_pressure_dia=data.get('blood_pressure_dia'),
+                glucose_level=data.get('glucose_level'),
+                meals=meals_json,
+                notes=data.get('notes', ''),
+                source='web_pwa',
+                sync_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            )
+            db.add(new_record)
+            db.commit()
             return jsonify({"status": "success"})
         except Exception as e:
+            db.rollback()
             return jsonify({"status": "error", "message": str(e)}), 400
         finally:
-            if 'conn' in locals():
-                conn.close()
+            db.close()
 
 
 @app.route("/generate_plots/<int:user_id>")
 def generate_plots(user_id):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        
-        # Get user records
-        query = '''
-            SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level, meals
-            FROM health_records
-            WHERE user_id = ?
-            ORDER BY date
-        '''
-        
-        data = pd.read_sql_query(query, conn, params=(user_id,))
+        # Use pandas with SQLAlchemy engine
+        query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level, meals FROM health_records WHERE user_id = :user_id ORDER BY date")
+        with engine.connect() as conn:
+            data = pd.read_sql_query(query, conn, params={"user_id": user_id})
 
         #print(data.head())
         
@@ -244,7 +185,7 @@ def generate_plots(user_id):
                 fig_weight.update_layout(
                     yaxis_title='Peso (kg)',
                     xaxis_title='Fecha',
-                    yaxis=dict(range=[87, 97]),  # Rango del eje Y: 87-97 kg
+                    yaxis=dict(range=[y_min, y_max]),  # Use calculated range
                     hovermode='x unified',        # Tooltip unificado
                     plot_bgcolor='white',         # Fondo blanco
                     font=dict(size=12)
@@ -354,9 +295,6 @@ def generate_plots(user_id):
         return jsonify(plots)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 def basic_analysis(data):
     """Realiza un análisis básico de los datos de salud sin usar IA"""
@@ -415,17 +353,9 @@ def save_local_report(data):
 @app.route("/analyze/<int:user_id>")
 def analyze_health_data(user_id):
     try:
-        conn = sqlite3.connect(DB_PATH)
-        
-        # Get user records
-        query = '''
-            SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level
-            FROM health_records
-            WHERE user_id = ?
-            ORDER BY date
-        '''
-        
-        data = pd.read_sql_query(query, conn, params=(user_id,))
+        query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level FROM health_records WHERE user_id = :user_id ORDER BY date")
+        with engine.connect() as conn:
+            data = pd.read_sql_query(query, conn, params={"user_id": user_id})
         
         if data.empty:
             return jsonify({"error": "No records found"}), 404
@@ -462,11 +392,8 @@ def analyze_health_data(user_id):
         return jsonify(analysis_result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
     
-    # Calculate basic statistics
+    # Calculate basic statistics (Unreachable code in original, kept for safety if flow changes)
     stats = {
         "weight": {
             "mean": data["weight"].mean(),
@@ -521,23 +448,18 @@ def send_report(data):
 @app.route('/health_data', methods=['GET'])
 def get_health_data():
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        
-        # Get all health data
-        c.execute('''
+        query = text('''
             SELECT u.name, u.email, u.phone, h.date, h.weight, 
                    h.blood_pressure_sys, h.blood_pressure_dia, h.glucose_level, h.meals
             FROM users u
             JOIN health_records h ON u.id = h.user_id
         ''')
-        
-        data = c.fetchall()
+        with engine.connect() as conn:
+            data = pd.read_sql_query(query, conn)
         
         # Convert to DataFrame
-        columns = ['name', 'email', 'phone', 'date', 'weight', 
-                   'blood_pressure_sys', 'blood_pressure_dia', 'glucose_level', 'meals']
-        df = pd.DataFrame(data, columns=columns)
+        # columns are inferred by read_sql_query
+        df = data
         
         # Generate basic plots
         plots = {}

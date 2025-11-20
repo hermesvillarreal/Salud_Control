@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -16,11 +16,14 @@ class HealthRecord(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    date = Column(Date)
+    date = Column(String)  # Stored as TEXT in SQLite
     weight = Column(Float)
     blood_pressure_sys = Column(Integer)
     blood_pressure_dia = Column(Integer)
     glucose_level = Column(Float)
+    meals = Column(String) # Stored as JSON string
     notes = Column(String)
+    source = Column(String)
+    sync_date = Column(String)
     
     user = relationship("User", back_populates="health_records")
