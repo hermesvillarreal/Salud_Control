@@ -235,12 +235,19 @@ def generate_plots(user_id):
                     y_min = min_weight - padding
                     y_max = max_weight + padding
                 
-                fig_weight = px.line(daily_weight, x='date_only', y='weight', title='Weight Over Time')
-                fig_weight.update_traces(mode='lines+markers', marker=dict(size=8))
+                fig_weight = px.bar(daily_weight, x='date_only', y='weight', title='Weight Over Time', markers=True)
+                fig_weight.update_traces(
+                    mode='lines+markers',           # Línea con marcadores
+                    line=dict(color='#4CAF50', width=3),  # Línea verde, grosor 3
+                    marker=dict(size=10, color='#2E7D32', line=dict(width=2, color='white'))  # Marcadores grandes
+                )
                 fig_weight.update_layout(
                     yaxis_title='Peso (kg)',
-                    yaxis=dict(range=[y_min, y_max]),
-                    xaxis_title='Fecha'
+                    xaxis_title='Fecha',
+                    yaxis=dict(range=[87, 97]),  # Rango del eje Y: 87-97 kg
+                    hovermode='x unified',        # Tooltip unificado
+                    plot_bgcolor='white',         # Fondo blanco
+                    font=dict(size=12)
                 )
                 plots['weight'] = fig_weight.to_json()
             else:
