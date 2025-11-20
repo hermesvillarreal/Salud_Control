@@ -132,6 +132,55 @@ def sync_data():
         if 'conn' in locals():
             conn.close()
 
+@app.route('/add_record', methods=['GET', 'POST'])
+def add_record():
+    if request.method == 'GET':
+        return render_template('add_record.html')
+    
+    if request.method == 'POST':
+        data = request.json
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            c = conn.cursor()
+            
+            # Ensure user exists (default user for PWA)
+            user_id = 1
+            c.execute('SELECT id FROM users WHERE id = ?', (user_id,))
+            if not c.fetchone():
+                c.execute('INSERT INTO users (id, name, email) VALUES (?, ?, ?)', 
+                         (1, "Usuario Principal", "usuario@example.com"))
+                conn.commit()
+
+            # Prepare meals JSON
+            meals_json = json.dumps(data.get('meals', {}))
+            
+            c.execute('''
+                INSERT INTO health_records 
+                (user_id, date, weight, blood_pressure_sys, blood_pressure_dia,
+                 glucose_level, meals, notes, source, sync_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                data.get('date'),
+                data.get('weight'),
+                data.get('blood_pressure_sys'),
+                data.get('blood_pressure_dia'),
+                data.get('glucose_level'),
+                meals_json,
+                data.get('notes', ''),
+                'web_pwa',
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            ))
+            
+            conn.commit()
+            return jsonify({"status": "success"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
+
 @app.route("/generate_plots/<int:user_id>")
 def generate_plots(user_id):
     try:
@@ -541,4 +590,4 @@ def get_health_data():
         }), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
