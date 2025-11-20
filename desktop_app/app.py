@@ -11,6 +11,7 @@ from database import SessionLocal, engine
 from models import Base, User, HealthRecord
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from services import get_or_create_user, create_health_record
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -45,41 +46,14 @@ def sync_data():
     
     try:
         # Create or get user
-        user = db.query(User).filter(User.email == data["email"]).first()
-        if not user:
-            user = User(name=data["name"], email=data["email"], phone=data.get("phone"))
-            db.add(user)
-            db.commit()
-            db.refresh(user)
+        user = get_or_create_user(db, data["email"], data["name"], data.get("phone"))
         
         # Add health records
-        sync_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         source_device = data.get("device_id", "unknown")
         
         for record in data["records"]:
-            # Normalize meals field: accept dict or JSON string or missing
-            meals = record.get('meals') or record.get('meals_data') or record.get('meals_data_json')
-            try:
-                meals_json = json.dumps(meals) if meals is not None else None
-            except Exception:
-                # If meals already a JSON string, keep as is
-                meals_json = meals if isinstance(meals, str) else None
-
-            new_record = HealthRecord(
-                user_id=user.id,
-                date=record.get("date"),
-                weight=record.get("weight"),
-                blood_pressure_sys=record.get("blood_pressure_sys"),
-                blood_pressure_dia=record.get("blood_pressure_dia"),
-                glucose_level=record.get("glucose_level"),
-                meals=meals_json,
-                notes=record.get("notes", ""),
-                source=source_device,
-                sync_date=sync_date
-            )
-            db.add(new_record)
+            create_health_record(db, user.id, record, source_device)
         
-        db.commit()
         return jsonify({"status": "success", "user_id": user.id})
     except Exception as e:
         db.rollback()
@@ -97,30 +71,11 @@ def add_record():
         db = SessionLocal()
         try:
             # Ensure user exists (default user for PWA)
-            user_id = 1
-            user = db.query(User).filter(User.id == user_id).first()
-            if not user:
-                user = User(id=1, name="Usuario Principal", email="usuario@example.com")
-                db.add(user)
-                db.commit()
-
-            # Prepare meals JSON
-            meals_json = json.dumps(data.get('meals', {}))
+            # We use a fixed email for the default user if not provided
+            user = get_or_create_user(db, "usuario@example.com", "Usuario Principal")
             
-            new_record = HealthRecord(
-                user_id=user_id,
-                date=data.get('date'),
-                weight=data.get('weight'),
-                blood_pressure_sys=data.get('blood_pressure_sys'),
-                blood_pressure_dia=data.get('blood_pressure_dia'),
-                glucose_level=data.get('glucose_level'),
-                meals=meals_json,
-                notes=data.get('notes', ''),
-                source='web_pwa',
-                sync_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            )
-            db.add(new_record)
-            db.commit()
+            create_health_record(db, user.id, data, 'web_pwa')
+            
             return jsonify({"status": "success"})
         except Exception as e:
             db.rollback()
