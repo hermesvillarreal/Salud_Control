@@ -4,6 +4,8 @@ python-dotenv==1.0.0
 flask==2.3.3
 plotly==5.17.0
 requests==2.31.0
+flask-login
+werkzeug
 
 # Desktop GUI dependencies
 PyQt5==5.15.9

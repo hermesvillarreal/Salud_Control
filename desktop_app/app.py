@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from datetime import datetime
 import pandas as pd
 import plotly.express as px
@@ -12,9 +12,25 @@ from models import Base, User, HealthRecord
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from services import get_or_create_user, create_health_record
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkey") # Change this in production!
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    db = SessionLocal()
+    try:
+        return db.query(User).get(int(user_id))
+    finally:
+        db.close()
 
 # Load environment variables
 load_dotenv()
@@ -25,8 +41,69 @@ if openai_api_key:
     openai.api_key = openai_api_key
 
 @app.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user=current_user)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == email).first()
+            if user and user.check_password(password):
+                login_user(user)
+                return redirect(url_for('index'))
+            else:
+                flash('Correo o contraseña incorrectos')
+        finally:
+            db.close()
+            
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+        
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        phone = request.form.get('phone')
+        
+        db = SessionLocal()
+        try:
+            if db.query(User).filter(User.email == email).first():
+                flash('El correo ya está registrado')
+                return redirect(url_for('register'))
+            
+            new_user = User(name=name, email=email, phone=phone)
+            new_user.set_password(password)
+            db.add(new_user)
+            db.commit()
+            
+            login_user(new_user)
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.rollback()
+            flash(f'Error al registrar: {str(e)}')
+        finally:
+            db.close()
+            
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
 
 @app.route('/service-worker.js')
 def service_worker():
@@ -41,6 +118,9 @@ init_db()
 
 @app.route("/sync_data", methods=["POST"])
 def sync_data():
+    # This endpoint might be used by external devices, so we might need API token auth later.
+    # For now, we'll leave it as is but it won't be linked to the web session.
+    # Ideally, the device sends a user identifier.
     data = request.json
     db = SessionLocal()
     
@@ -62,6 +142,7 @@ def sync_data():
         db.close()
 
 @app.route('/add_record', methods=['GET', 'POST'])
+@login_required
 def add_record():
     if request.method == 'GET':
         return render_template('add_record.html')
@@ -70,11 +151,8 @@ def add_record():
         data = request.json
         db = SessionLocal()
         try:
-            # Ensure user exists (default user for PWA)
-            # We use a fixed email for the default user if not provided
-            user = get_or_create_user(db, "usuario@example.com", "Usuario Principal")
-            
-            create_health_record(db, user.id, data, 'web_pwa')
+            # Use current_user
+            create_health_record(db, current_user.id, data, 'web_pwa')
             
             return jsonify({"status": "success"})
         except Exception as e:
@@ -84,8 +162,10 @@ def add_record():
             db.close()
 
 
-@app.route("/generate_plots/<int:user_id>")
-def generate_plots(user_id):
+@app.route("/generate_plots")
+@login_required
+def generate_plots():
+    user_id = current_user.id
     try:
         # Use pandas with SQLAlchemy engine
         query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level, meals FROM health_records WHERE user_id = :user_id ORDER BY date")
@@ -95,7 +175,8 @@ def generate_plots(user_id):
         #print(data.head())
         
         if data.empty:
-            return jsonify({"error": "No records found"}), 404
+            # Return empty plots structure instead of 404 to avoid breaking frontend
+            return jsonify({})
         
         # Generate plots
         plots = {}
@@ -305,8 +386,10 @@ def save_local_report(data):
             "message": f"Error al guardar el reporte: {str(e)}"
         }
 
-@app.route("/analyze/<int:user_id>")
-def analyze_health_data(user_id):
+@app.route("/analyze")
+@login_required
+def analyze_health_data():
+    user_id = current_user.id
     try:
         query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level FROM health_records WHERE user_id = :user_id ORDER BY date")
         with engine.connect() as conn:
@@ -401,6 +484,7 @@ def send_report(data):
     return save_local_report(data)
 
 @app.route('/health_data', methods=['GET'])
+@login_required
 def get_health_data():
     try:
         query = text('''
@@ -408,9 +492,10 @@ def get_health_data():
                    h.blood_pressure_sys, h.blood_pressure_dia, h.glucose_level, h.meals
             FROM users u
             JOIN health_records h ON u.id = h.user_id
+            WHERE u.id = :user_id
         ''')
         with engine.connect() as conn:
-            data = pd.read_sql_query(query, conn)
+            data = pd.read_sql_query(query, conn, params={"user_id": current_user.id})
         
         # Convert to DataFrame
         # columns are inferred by read_sql_query

@@ -26,6 +26,9 @@
 <body>
     <div class="header">
         <h1>Panel de Control de Salud</h1>
+        <div style="position: absolute; top: 20px; right: 20px;">
+            <a href="/logout" style="color: white; text-decoration: none; font-weight: bold;">Cerrar Sesión</a>
+        </div>
     </div>
 
     <div class="container">
@@ -146,8 +149,8 @@
                     throw new Error(statsData.message || 'Error desconocido al cargar datos');
                 }
 
-                // Obtener las gráficas generadas para user_id = 1
-                const respPlots = await fetch('/generate_plots/1');
+                // Obtener las gráficas generadas para el usuario actual
+                const respPlots = await fetch('/generate_plots');
                 if (!respPlots.ok) throw new Error('Error al generar gráficas');
 
                 const plots = await respPlots.json();
