@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Registro - Salud Control</title>
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon.svg">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Nuevo Registro Diario</h1>
+    </div>
+
+    <div class="container">
+        <form id="healthForm">
+            <!-- Fecha y Hora -->
+            <div class="card">
+                <div class="row">
+                    <div class="col">
+                        <label for="date">Fecha</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="col">
+                        <label for="time">Hora</label>
+                        <input type="time" id="time" name="time" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mediciones Básicas -->
+            <div class="card">
+                <h3 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Mediciones</h3>
+                <div class="form-group">
+                    <label for="weight">Peso (kg)</label>
+                    <input type="number" id="weight" name="weight" step="0.1" placeholder="0.0">
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <label for="systolic">Presión Sistólica</label>
+                        <input type="number" id="systolic" name="systolic" placeholder="120">
+                    </div>
+                    <div class="col">
+                        <label for="diastolic">Presión Diastólica</label>
+                        <input type="number" id="diastolic" name="diastolic" placeholder="80">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="glucose">Glucosa (mg/dL)</label>
+                    <input type="number" id="glucose" name="glucose" step="1" placeholder="0">
+                </div>
+            </div>
+
+            <!-- Comidas (Acordeón) -->
+            <div class="card">
+                <h3 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Registro de Comidas</h3>
+
+                <div id="mealsContainer">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Notas -->
+            <div class="card">
+                <label for="notes">Notas / Observaciones</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="¿Cómo te sientes hoy?"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar Registro</button>
+            <a href="/" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+
+    <div id="toast" class="toast">Registro guardado correctamente</div>
+
+    <script>
+        // Configurar fecha y hora actual
+        const now = new Date();
+        document.getElementById('date').valueAsDate = now;
+        document.getElementById('time').value = now.toTimeString().slice(0, 5);
+
+        // Generar campos de comida
+        const meals = [
+            { id: 'breakfast', name: 'Desayuno' },
+            { id: 'morning_snack', name: 'Merienda Mañana' },
+            { id: 'lunch', name: 'Almuerzo' },
+            { id: 'afternoon_snack', name: 'Merienda Tarde' },
+            { id: 'dinner', name: 'Cena' },
+            { id: 'post_dinner', name: 'Post-Cena' }
+        ];
+
+        const mealsContainer = document.getElementById('mealsContainer');
+
+        meals.forEach(meal => {
+            const btn = document.createElement('button');
+            btn.className = 'accordion';
+            btn.type = 'button'; // Prevent form submit
+            btn.textContent = meal.name;
+
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+            panel.innerHTML = `
+                <div class="row" style="padding: 15px 0;">
+                    <div class="col">
+                        <label style="font-size:0.9rem">Proteínas (g)</label>
+                        <input type="number" name="meals[${meal.id}][protein]" step="0.1" placeholder="0">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.9rem">Carbos (g)</label>
+                        <input type="number" name="meals[${meal.id}][carbs]" step="0.1" placeholder="0">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.9rem">Grasas (g)</label>
+                        <input type="number" name="meals[${meal.id}][fat]" step="0.1" placeholder="0">
+                    </div>
+                </div>
+            `;
+
+            btn.addEventListener('click', function () {
+                this.classList.toggle("active");
+                if (panel.style.maxHeight) {
+                    panel.style.maxHeight = null;
+                } else {
+                    panel.style.maxHeight = panel.scrollHeight + "px";
+                }
+            });
+
+            mealsContainer.appendChild(btn);
+            mealsContainer.appendChild(panel);
+        });
+
+        // Manejar envío del formulario
+        document.getElementById('healthForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Guardando...';
+
+            const formData = new FormData(this);
+            const data = {
+                date: formData.get('date') + ' ' + formData.get('time') + ':00',
+                weight: parseFloat(formData.get('weight')) || 0,
+                blood_pressure_sys: parseInt(formData.get('systolic')) || 0,
+                blood_pressure_dia: parseInt(formData.get('diastolic')) || 0,
+                glucose_level: parseFloat(formData.get('glucose')) || 0,
+                notes: formData.get('notes'),
+                meals: {}
+            };
+
+            // Procesar comidas
+            meals.forEach(meal => {
+                data.meals[meal.id] = {
+                    protein: parseFloat(document.querySelector(`input[name="meals[${meal.id}][protein]"]`).value) || 0,
+                    carbs: parseFloat(document.querySelector(`input[name="meals[${meal.id}][carbs]"]`).value) || 0,
+                    fat: parseFloat(document.querySelector(`input[name="meals[${meal.id}][fat]"]`).value) || 0
+                };
+            });
+
+            try {
+                const response = await fetch('/add_record', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showToast();
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    alert('Error al guardar los datos');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+        function showToast() {
+            const x = document.getElementById("toast");
+            x.className = "toast show";
+            setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+        }
+    </script>
+</body>
+
+</html>

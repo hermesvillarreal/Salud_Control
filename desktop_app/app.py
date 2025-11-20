@@ -147,7 +147,7 @@ def generate_plots(user_id):
         
         data = pd.read_sql_query(query, conn, params=(user_id,))
 
-        print(data.head())
+        #print(data.head())
         
         if data.empty:
             return jsonify({"error": "No records found"}), 404
@@ -167,15 +167,37 @@ def generate_plots(user_id):
             valid_weights = valid_weights[valid_weights['weight'] > 0]
             if not valid_weights.empty:
                 daily_weight = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
-                print('Daily weight data:\n', daily_weight)
+                #print('Daily weight data:\n', daily_weight)
+                
+                # Ensure weight column is float
+                daily_weight['weight'] = daily_weight['weight'].astype(float)
+                
+                # Calculate y-axis range with padding
+                min_weight = daily_weight['weight'].min()
+                max_weight = daily_weight['weight'].max()
+                weight_range = max_weight - min_weight
+                
+                # If all weights are the same or very close, add padding
+                if weight_range < 1:
+                    y_min = min_weight - 5
+                    y_max = max_weight + 5
+                else:
+                    padding = weight_range * 0.1
+                    y_min = min_weight - padding
+                    y_max = max_weight + padding
+                
                 fig_weight = px.line(daily_weight, x='date_only', y='weight', title='Weight Over Time')
-                #fig_weight.update_traces(mode='lines+markers')
-                fig_weight.update_layout(yaxis_title='Peso (kg)')
+                fig_weight.update_traces(mode='lines+markers', marker=dict(size=8))
+                fig_weight.update_layout(
+                    yaxis_title='Peso (kg)',
+                    yaxis=dict(range=[y_min, y_max]),
+                    xaxis_title='Fecha'
+                )
                 plots['weight'] = fig_weight.to_json()
             else:
                 # fallback to raw data if no valid weights
                 fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-                #fig_weight.update_traces(mode='lines+markers')
+                fig_weight.update_traces(mode='lines+markers')
                 fig_weight.update_layout(yaxis_title='Peso (kg)')
                 plots["weight"] = fig_weight.to_json()
         except Exception as e:
@@ -190,14 +212,14 @@ def generate_plots(user_id):
         valid_sys['blood_pressure_sys'] = pd.to_numeric(valid_sys['blood_pressure_sys'], errors='coerce')
         valid_sys = valid_sys.dropna(subset=['blood_pressure_sys']).reset_index(drop=True)
     
-        print('Daily Systolic data:\n', valid_sys[['date', 'blood_pressure_sys']])
+        #print('Daily Systolic data:\n', valid_sys[['date', 'blood_pressure_sys']])
 
         valid_dia = data.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
         valid_dia = valid_dia[valid_dia['blood_pressure_dia'] > 0].reset_index(drop=True)
         valid_dia['blood_pressure_dia'] = pd.to_numeric(valid_dia['blood_pressure_dia'], errors='coerce')
         valid_dia = valid_dia.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
 
-        print('Daily Diastolic data:\n', valid_dia[['date', 'blood_pressure_dia']])
+        #print('Daily Diastolic data:\n', valid_dia[['date', 'blood_pressure_dia']])
 
         # Blood pressure
         fig_bp = go.Figure()
@@ -211,7 +233,7 @@ def generate_plots(user_id):
         valid_glu = valid_glu[valid_glu['glucose_level'] > 0].reset_index(drop=True)
         valid_glu['glucose_level'] = pd.to_numeric(valid_glu['glucose_level'], errors='coerce')
 
-        print('Daily Glucose data:\n', valid_glu[['date', 'glucose_level']])
+        #print('Daily Glucose data:\n', valid_glu[['date', 'glucose_level']])
 
         fig_glucose = px.line(valid_glu, x="date", y="glucose_level", title="Glucose Levels Over Time")
         fig_glucose.update_traces(mode='lines+markers')

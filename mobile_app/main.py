@@ -3,7 +3,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                            QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                            QDateEdit, QTimeEdit, QTextEdit, QMessageBox,
                            QTabWidget, QSpinBox, QDoubleSpinBox, QTableWidget,
-                           QTableWidgetItem, QHeaderView, QScrollArea, QFrame)
+                           QTableWidgetItem, QHeaderView, QScrollArea, QFrame,
+                           QStatusBar)
 from PyQt5.QtCore import Qt, QDate, QTime
 from database import MobileDatabase
 import json
@@ -19,6 +20,25 @@ class MainWindow(QMainWindow):
     def initUI(self):
         self.setWindowTitle('Salud Control - Registro de Datos')
         self.setGeometry(100, 100, 500, 700)
+        
+        # Estilo global para mejorar usabilidad (touch targets más grandes)
+        self.setStyleSheet("""
+            QSpinBox, QDoubleSpinBox { 
+                min-height: 40px; 
+                font-size: 14px; 
+            }
+            QSpinBox::up-button, QDoubleSpinBox::up-button,
+            QSpinBox::down-button, QDoubleSpinBox::down-button {
+                width: 40px;
+            }
+            QPushButton {
+                min-height: 40px;
+                font-size: 14px;
+            }
+            QTableWidget {
+                font-size: 12px;
+            }
+        """)
 
         # Widget y layout principal
         main_widget = QWidget()
@@ -38,6 +58,11 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.tab_records, "Registros Diarios")
         self.tabs.addTab(self.tab_general, "Información General")
         self.tabs.addTab(self.tab_goals, "Metas Nutricionales")
+
+        # Barra de estado para notificaciones no intrusivas
+        self.setStatusBar(QStatusBar())
+        self.sync_status_label = QLabel("Estado: Sin sincronizar")
+        self.statusBar().addPermanentWidget(self.sync_status_label)
 
         # Inicializar las pestañas
         self.init_records_tab()
@@ -121,7 +146,9 @@ class MainWindow(QMainWindow):
             if meals_summary:
                 resumen += "\nRegistro de comidas:\n"
                 resumen += "\n".join(meals_summary)
-            QMessageBox.information(self, 'Éxito', resumen)
+            
+            # Feedback no intrusivo
+            self.statusBar().showMessage("Datos guardados correctamente", 3000)
             
             # Recargar el último registro y mantener los valores en los campos
             self.load_last_record()
@@ -209,6 +236,7 @@ class MainWindow(QMainWindow):
         self.weight_edit = QDoubleSpinBox()
         self.weight_edit.setRange(0, 300)
         self.weight_edit.setDecimals(1)
+        self.weight_edit.setSingleStep(0.1)
         self.weight_edit.setSuffix(' kg')
         weight_layout.addWidget(weight_label)
         weight_layout.addWidget(self.weight_edit)
@@ -234,6 +262,7 @@ class MainWindow(QMainWindow):
         self.glucose_edit = QDoubleSpinBox()
         self.glucose_edit.setRange(0, 500)
         self.glucose_edit.setDecimals(1)
+        self.glucose_edit.setSingleStep(1.0)
         self.glucose_edit.setSuffix(' mg/dL')
         glucose_layout.addWidget(glucose_label)
         glucose_layout.addWidget(self.glucose_edit)
@@ -335,6 +364,13 @@ class MainWindow(QMainWindow):
 
         # Una vez que todos los widgets están creados, cargar el último registro
         self.load_last_record()
+
+        # Configurar orden de tabulación (Tab Order)
+        self.setTabOrder(self.date_edit, self.time_edit)
+        self.setTabOrder(self.time_edit, self.weight_edit)
+        self.setTabOrder(self.weight_edit, self.systolic_edit)
+        self.setTabOrder(self.systolic_edit, self.diastolic_edit)
+        self.setTabOrder(self.diastolic_edit, self.glucose_edit)
 
     def init_general_tab(self):
         layout = QVBoxLayout()
@@ -734,11 +770,8 @@ class MainWindow(QMainWindow):
                 )
 
                 if response.status_code == 200:
-                    QMessageBox.information(
-                        self, 
-                        'Éxito', 
-                        'Datos sincronizados correctamente con la aplicación desktop'
-                    )
+                    self.sync_status_label.setText("Estado: Sincronizado ✅")
+                    self.statusBar().showMessage("Sincronización completada", 3000)
                 else:
                     QMessageBox.warning(
                         self, 
@@ -747,6 +780,7 @@ class MainWindow(QMainWindow):
                     )
 
             except requests.exceptions.ConnectionError:
+                self.sync_status_label.setText("Estado: Error de conexión ❌")
                 QMessageBox.critical(
                     self, 
                     'Error de Conexión',
