@@ -197,3 +197,24 @@ Las contribuciones son bienvenidas:
 3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
+
+## 📝 Tareas de Mejora de Usabilidad
+
+A continuación se detalla una lista de tareas identificadas para mejorar la experiencia de usuario (UX) y la interfaz de usuario (UI) del proyecto.
+
+### General
+- [ ] Mejorar el manejo de errores y mensajes al usuario (feedback visual más claro).
+- [ ] Unificar el estilo visual entre ambas aplicaciones para una experiencia coherente.
+
+### Mobile App (PyQt5)
+- [ ] **Validación de Entrada**: Mejorar la configuración de los `SpinBox` para facilitar la entrada de datos (pasos más grandes, botones +/- más accesibles).
+- [ ] **Navegación**: Revisar el orden de tabulación (tab order) para facilitar el uso con teclado.
+- [ ] **Feedback**: Reemplazar algunos `QMessageBox` modales por notificaciones no intrusivas (e.g., barra de estado) para acciones frecuentes como guardar.
+- [ ] **Visualización**: Mejorar el diseño de la tabla de metas para que sea más legible en diferentes tamaños de ventana.
+- [ ] **Sincronización**: Agregar un indicador visual de estado de sincronización (conectado/desconectado, última sincronización).
+
+### Desktop App (Web)
+- [ ] **Feedback de Carga**: Implementar indicadores de carga (spinners) para las gráficas y datos mientras se obtienen del servidor.
+- [ ] **Manejo de Errores**: Mostrar mensajes de error amigables en la interfaz si falla la carga de datos, en lugar de solo en la consola.
+- [ ] **Estética**: Mejorar el diseño CSS para una apariencia más moderna y pulida (e.g., sombras suaves, mejores tipografías).
+- [ ] **Interactividad**: Agregar tooltips o explicaciones breves sobre qué significa cada gráfica o estadística.

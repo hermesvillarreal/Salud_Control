@@ -24,6 +24,10 @@ if openai_api_key:
 def index():
     return render_template('index.html')
 
+@app.route('/service-worker.js')
+def service_worker():
+    return app.send_static_file('service-worker.js')
+
 # Database configuration
 DB_PATH = os.getenv('DESKTOP_DB_PATH', 'desktop_health.db')
 
