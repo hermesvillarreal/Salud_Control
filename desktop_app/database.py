@@ -10,9 +10,11 @@ SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not SQLALCHEMY_DATABASE_URL:
     # Fallback to SQLite
-    DB_PATH = os.getenv('DESKTOP_DB_PATH', 'desktop_health.db')
-    # Ensure absolute path for SQLite to avoid issues
+    # Ensure absolute path for SQLite to avoid issues with CWD
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DB_NAME = os.getenv('DESKTOP_DB_PATH', 'desktop_health.db')
+    DB_PATH = os.path.join(BASE_DIR, DB_NAME)
+    
     # To be safe and consistent with previous behavior:
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
