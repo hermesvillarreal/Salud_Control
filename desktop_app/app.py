@@ -28,7 +28,7 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     db = SessionLocal()
     try:
-        return db.query(User).get(int(user_id))
+        return db.get(User, int(user_id))
     finally:
         db.close()
 
