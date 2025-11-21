@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Alimentos - Salud Control</title>
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="header">
+        <h1>Registrar Alimentos</h1>
+    </div>
+
+    <div class="container">
+        <form id="foodForm">
+            <div class="card">
+                <div class="row">
+                    <div class="col">
+                        <label for="date">Fecha</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="col">
+                        <label for="time">Hora</label>
+                        <input type="time" id="time" name="time" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0; border-bottom: 1px solid #eee; padding-bottom: 10px;">Seleccionar Comida</h3>
+                <div id="mealsContainer">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+
+            <div class="card">
+                <label for="notes">Notas / Observaciones</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="¿Qué comiste?"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <a href="/add_record" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+
+    <div id="toast" class="toast">Guardado correctamente</div>
+
+    <script>
+        const now = new Date();
+        document.getElementById('date').valueAsDate = now;
+        document.getElementById('time').value = now.toTimeString().slice(0, 5);
+
+        const meals = [
+            { id: 'breakfast', name: 'Desayuno' },
+            { id: 'morning_snack', name: 'Merienda Mañana' },
+            { id: 'lunch', name: 'Almuerzo' },
+            { id: 'afternoon_snack', name: 'Merienda Tarde' },
+            { id: 'dinner', name: 'Cena' },
+            { id: 'post_dinner', name: 'Post-Cena' }
+        ];
+
+        const mealsContainer = document.getElementById('mealsContainer');
+
+        meals.forEach(meal => {
+            const btn = document.createElement('button');
+            btn.className = 'accordion';
+            btn.type = 'button';
+            btn.textContent = meal.name;
+
+            const panel = document.createElement('div');
+            panel.className = 'panel';
+            panel.innerHTML = `
+                <div class="row" style="padding: 15px 0;">
+                    <div class="col">
+                        <label style="font-size:0.9rem">Proteínas (g)</label>
+                        <input type="number" name="meals[${meal.id}][protein]" step="0.1" placeholder="0">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.9rem">Carbos (g)</label>
+                        <input type="number" name="meals[${meal.id}][carbs]" step="0.1" placeholder="0">
+                    </div>
+                    <div class="col">
+                        <label style="font-size:0.9rem">Grasas (g)</label>
+                        <input type="number" name="meals[${meal.id}][fat]" step="0.1" placeholder="0">
+                    </div>
+                </div>
+            `;
+
+            btn.addEventListener('click', function () {
+                // Close others
+                const allPanels = document.querySelectorAll('.panel');
+                const allBtns = document.querySelectorAll('.accordion');
+
+                allPanels.forEach(p => {
+                    if (p !== panel) p.style.maxHeight = null;
+                });
+                allBtns.forEach(b => {
+                    if (b !== btn) b.classList.remove("active");
+                });
+
+                this.classList.toggle("active");
+                if (panel.style.maxHeight) {
+                    panel.style.maxHeight = null;
+                } else {
+                    panel.style.maxHeight = panel.scrollHeight + "px";
+                }
+            });
+
+            mealsContainer.appendChild(btn);
+            mealsContainer.appendChild(panel);
+        });
+
+        document.getElementById('foodForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Guardando...';
+
+            const formData = new FormData(this);
+            const data = {
+                date: formData.get('date') + ' ' + formData.get('time') + ':00',
+                notes: formData.get('notes'),
+                meals: {},
+                type: 'food'
+            };
+
+            meals.forEach(meal => {
+                const p = parseFloat(document.querySelector(`input[name="meals[${meal.id}][protein]"]`).value) || 0;
+                const c = parseFloat(document.querySelector(`input[name="meals[${meal.id}][carbs]"]`).value) || 0;
+                const f = parseFloat(document.querySelector(`input[name="meals[${meal.id}][fat]"]`).value) || 0;
+
+                if (p > 0 || c > 0 || f > 0) {
+                    data.meals[meal.id] = { protein: p, carbs: c, fat: f };
+                }
+            });
+
+            try {
+                const response = await fetch('/add/food', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    document.getElementById("toast").className = "toast show";
+                    setTimeout(() => window.location.href = '/', 1500);
+                } else {
+                    alert('Error al guardar');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Guardar';
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Guardar';
+            }
+        });
+    </script>
+</body>
+
+</html>

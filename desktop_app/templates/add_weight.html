@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Peso - Salud Control</title>
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="header">
+        <h1>Registrar Peso</h1>
+    </div>
+
+    <div class="container">
+        <form id="weightForm">
+            <div class="card">
+                <div class="row">
+                    <div class="col">
+                        <label for="date">Fecha</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="col">
+                        <label for="time">Hora</label>
+                        <input type="time" id="time" name="time" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="form-group">
+                    <label for="weight">Peso (kg)</label>
+                    <input type="number" id="weight" name="weight" step="0.1" placeholder="0.0" required
+                        style="font-size: 2rem; text-align: center;">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <a href="/add_record" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+
+    <div id="toast" class="toast">Guardado correctamente</div>
+
+    <script>
+        const now = new Date();
+        document.getElementById('date').valueAsDate = now;
+        document.getElementById('time').value = now.toTimeString().slice(0, 5);
+
+        document.getElementById('weightForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Guardando...';
+
+            const formData = new FormData(this);
+            const data = {
+                date: formData.get('date') + ' ' + formData.get('time') + ':00',
+                weight: parseFloat(formData.get('weight')),
+                type: 'weight'
+            };
+
+            try {
+                const response = await fetch('/add/weight', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    document.getElementById("toast").className = "toast show";
+                    setTimeout(() => window.location.href = '/', 1500);
+                } else {
+                    alert('Error al guardar');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Guardar';
+                }
+            } catch (error) {
+                alert('Error de conexión');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Guardar';
+            }
+        });
+    </script>
+</body>
+
+</html>
