@@ -21,6 +21,7 @@ class User(UserMixin, Base):
     blood_pressure_records = relationship("BloodPressureRecord", back_populates="user", cascade="all, delete-orphan")
     glucose_records = relationship("GlucoseRecord", back_populates="user", cascade="all, delete-orphan")
     food_records = relationship("FoodRecord", back_populates="user", cascade="all, delete-orphan")
+    exercise_records = relationship("ExerciseRecord", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -99,3 +100,19 @@ class FoodRecord(Base):
     sync_date = Column(String)
     
     user = relationship("User", back_populates="food_records")
+
+class ExerciseRecord(Base):
+    __tablename__ = "exercise_records"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(String, nullable=False)
+    exercise_type = Column(String)
+    duration_minutes = Column(Integer)
+    calories_burned = Column(Integer)
+    intensity = Column(String)
+    notes = Column(String)
+    source = Column(String)
+    sync_date = Column(String)
+    
+    user = relationship("User", back_populates="exercise_records")

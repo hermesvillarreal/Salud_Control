@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from models import User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord
+from models import User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord, ExerciseRecord
 from sqlalchemy.orm import Session
 
 def get_or_create_user(db: Session, email: str, name: str, phone: str = None) -> User:
@@ -90,6 +90,26 @@ def create_food_record(db: Session, user_id: int, record_data: dict, source: str
     db.refresh(new_record)
     return new_record
 
+def create_exercise_record(db: Session, user_id: int, record_data: dict, source: str) -> ExerciseRecord:
+    """Create and save a new exercise record."""
+    sync_date = record_data.get('sync_date') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    new_record = ExerciseRecord(
+        user_id=user_id,
+        date=record_data.get("date"),
+        exercise_type=record_data.get("exercise_type"),
+        duration_minutes=record_data.get("duration_minutes"),
+        calories_burned=record_data.get("calories_burned"),
+        intensity=record_data.get("intensity"),
+        notes=record_data.get("notes", ""),
+        source=source,
+        sync_date=sync_date
+    )
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+    return new_record
+
 def create_health_record(db: Session, user_id: int, record_data: dict, source: str):
     """
     Create health record(s) based on the data provided.
@@ -119,6 +139,11 @@ def create_health_record(db: Session, user_id: int, record_data: dict, source: s
     if meals is not None:
         food_record = create_food_record(db, user_id, record_data, source)
         created_records.append(("food", food_record))
+
+    # Check and create exercise record if exercise data is present
+    if record_data.get("exercise_type") is not None:
+        exercise_record = create_exercise_record(db, user_id, record_data, source)
+        created_records.append(("exercise", exercise_record))
     
     # Return the first record for backward compatibility, or all records info
     if created_records:

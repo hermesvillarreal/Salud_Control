@@ -8,7 +8,7 @@ import os
 import google.generativeai as genai
 import json
 from database import SessionLocal, engine
-from models import Base, User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord
+from models import Base, User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord, ExerciseRecord
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from services import get_or_create_user, create_health_record
@@ -281,6 +281,83 @@ def analyze_food():
     except Exception as e:
         print(f"Error analyzing food: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/analyze_exercise', methods=['POST'])
+@login_required
+def analyze_exercise():
+    if not gemini_api_key:
+        return jsonify({"error": "Gemini API key not configured"}), 503
+        
+    try:
+        data = request.json
+        description = data.get('description', '')
+        image_b64 = data.get('image')
+        mime_type = data.get('mime_type', 'image/jpeg')
+        
+        if not description and not image_b64:
+            return jsonify({"error": "No description or image provided"}), 400
+            
+        model = genai.GenerativeModel('gemini-flash-latest', generation_config={"response_mime_type": "application/json"})
+        
+        prompt_text = """
+        Analyze the following exercise description and/or image and extract the details.
+        Return a JSON object with the following keys: 
+        - "tipo_ejercicio" (str): Type of exercise (e.g., Running, Weightlifting)
+        - "duracion_minutos" (int): Duration in minutes
+        - "calorias_quemadas" (int): Estimated calories burned
+        - "intensidad" (str): One of ["baja", "media", "alta"]
+        - "otros_datos_de_interes" (str): Any other relevant info found
+        
+        Description: {description}
+        """
+        
+        content = [prompt_text.format(description=description)]
+        
+        if image_b64:
+            import base64
+            image_bytes = base64.b64decode(image_b64)
+            content.append({
+                "mime_type": mime_type,
+                "data": image_bytes
+            })
+        
+        response = model.generate_content(content)
+        result = json.loads(response.text)
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Error analyzing exercise: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/add/exercise', methods=['GET', 'POST'])
+@login_required
+def add_exercise():
+    if request.method == 'GET':
+        return render_template('add_exercise.html')
+    
+    if request.method == 'POST':
+        data = request.json
+        db = SessionLocal()
+        try:
+            from services import create_exercise_record
+            
+            record_data = {
+                "date": data.get("date"),
+                "exercise_type": data.get("tipo_ejercicio"),
+                "duration_minutes": data.get("duracion_minutos"),
+                "calories_burned": data.get("calorias_quemadas"),
+                "intensity": data.get("intensidad"),
+                "notes": data.get("otros_datos_de_interes"),
+                "sync_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            create_exercise_record(db, current_user.id, record_data, 'web_pwa')
+            return jsonify({"status": "success"})
+        except Exception as e:
+            db.rollback()
+            return jsonify({"status": "error", "message": str(e)}), 400
+        finally:
+            db.close()
 
 @app.route("/generate_plots")
 @login_required

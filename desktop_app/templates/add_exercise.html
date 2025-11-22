@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Ejercicio - Salud Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #1976D2;
+            --background-color: #f5f5f5;
+            --card-color: #ffffff;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: var(--card-color);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .back-button {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            margin-right: 16px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input[type="date"],
+        input[type="number"],
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .ai-section {
+            background-color: #e3f2fd;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            border: 1px solid #bbdefb;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            color: var(--secondary-color);
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .ai-title i {
+            margin-right: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: #fff;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e3f2fd;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+            color: var(--text-secondary);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .image-preview {
+            max-width: 100%;
+            margin-top: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <a href="/add_record" class="back-button"><i class="fas fa-arrow-left"></i></a>
+            <h1>Registrar Ejercicio</h1>
+        </header>
+
+        <div class="ai-section">
+            <div class="ai-title">
+                <i class="fas fa-robot"></i>
+                <span>Asistente IA (Gemini)</span>
+            </div>
+            <p style="margin-top: 0; font-size: 0.9rem; color: #555;">
+                Describe tu ejercicio o sube una foto (ej. captura de reloj inteligente) para autocompletar.
+            </p>
+
+            <div class="form-group">
+                <textarea id="ai-description" placeholder="Ej: Corrí 5km en 30 minutos a ritmo medio..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="ai-image"
+                    style="cursor: pointer; display: inline-block; background: #fff; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <i class="fas fa-camera"></i> Subir imagen
+                </label>
+                <input type="file" id="ai-image" accept="image/*" style="display: none;">
+                <div id="file-name" style="font-size: 0.8rem; margin-top: 4px;"></div>
+                <img id="image-preview" class="image-preview" alt="Vista previa">
+            </div>
+
+            <button type="button" class="btn-secondary" onclick="analyzeExercise()" id="analyze-btn">
+                <i class="fas fa-magic"></i> Analizar con IA
+            </button>
+            <div class="loading" id="ai-loading">
+                <i class="fas fa-spinner"></i> Analizando...
+            </div>
+        </div>
+
+        <form id="exercise-form">
+            <div class="form-group">
+                <label for="date">Fecha y Hora</label>
+                <input type="datetime-local" id="date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tipo_ejercicio">Tipo de Ejercicio</label>
+                <input type="text" id="tipo_ejercicio" required placeholder="Ej: Running, Pesas, Yoga">
+            </div>
+
+            <div class="form-group">
+                <label for="duracion_minutos">Duración (minutos)</label>
+                <input type="number" id="duracion_minutos" required min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="calorias_quemadas">Calorías Quemadas (aprox)</label>
+                <input type="number" id="calorias_quemadas" min="0">
+            </div>
+
+            <div class="form-group">
+                <label for="intensidad">Intensidad</label>
+                <select id="intensidad">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="otros_datos_de_interes">Notas / Otros Datos</label>
+                <textarea id="otros_datos_de_interes"
+                    placeholder="Distancia, ritmo cardiaco, observaciones..."></textarea>
+            </div>
+
+            <button type="submit" id="save-btn">Guardar Registro</button>
+        </form>
+    </div>
+
+    <script>
+        // Set default datetime to now
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('date').value = now.toISOString().slice(0, 16);
+
+        // Handle image selection
+        const imageInput = document.getElementById('ai-image');
+        const imagePreview = document.getElementById('image-preview');
+        const fileNameDisplay = document.getElementById('file-name');
+        let currentImageBase64 = null;
+        let currentImageMimeType = null;
+
+        imageInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+
+                    // Extract base64 data (remove "data:image/jpeg;base64," prefix)
+                    const result = e.target.result;
+                    currentImageMimeType = result.split(';')[0].split(':')[1];
+                    currentImageBase64 = result.split(',')[1];
+                };
+                reader.readAsDataURL(file);
+            } else {
+                fileNameDisplay.textContent = '';
+                imagePreview.style.display = 'none';
+                currentImageBase64 = null;
+                currentImageMimeType = null;
+            }
+        });
+
+        async function analyzeExercise() {
+            const description = document.getElementById('ai-description').value;
+
+            if (!description && !currentImageBase64) {
+                alert('Por favor describe el ejercicio o sube una imagen.');
+                return;
+            }
+
+            const btn = document.getElementById('analyze-btn');
+            const loading = document.getElementById('ai-loading');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+
+            try {
+                const response = await fetch('/analyze_exercise', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        description: description,
+                        image: currentImageBase64,
+                        mime_type: currentImageMimeType
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    // Auto-fill fields
+                    if (data.tipo_ejercicio) document.getElementById('tipo_ejercicio').value = data.tipo_ejercicio;
+                    if (data.duracion_minutos) document.getElementById('duracion_minutos').value = data.duracion_minutos;
+                    if (data.calorias_quemadas) document.getElementById('calorias_quemadas').value = data.calorias_quemadas;
+
+                    if (data.intensidad) {
+                        const intensityMap = {
+                            'baja': 'baja', 'media': 'media', 'alta': 'alta',
+                            'low': 'baja', 'medium': 'media', 'high': 'alta'
+                        };
+                        const mapped = intensityMap[data.intensidad.toLowerCase()] || 'media';
+                        document.getElementById('intensidad').value = mapped;
+                    }
+
+                    if (data.otros_datos_de_interes) {
+                        document.getElementById('otros_datos_de_interes').value = data.otros_datos_de_interes;
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al analizar el ejercicio.');
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        document.getElementById('exercise-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('save-btn');
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+
+            const formData = {
+                date: document.getElementById('date').value,
+                tipo_ejercicio: document.getElementById('tipo_ejercicio').value,
+                duracion_minutos: parseInt(document.getElementById('duracion_minutos').value),
+                calorias_quemadas: parseInt(document.getElementById('calorias_quemadas').value),
+                intensidad: document.getElementById('intensidad').value,
+                otros_datos_de_interes: document.getElementById('otros_datos_de_interes').value
+            };
+
+            try {
+                const response = await fetch('/add/exercise', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    window.location.href = '/';
+                } else {
+                    alert('Error al guardar: ' + (result.message || 'Error desconocido'));
+                    btn.disabled = false;
+                    btn.textContent = 'Guardar Registro';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error de conexión');
+                btn.disabled = false;
+                btn.textContent = 'Guardar Registro';
+            }
+        });
+    </script>
+</body>
+
+</html>
