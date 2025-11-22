@@ -222,7 +222,23 @@ def add_glucose():
 @login_required
 def add_food():
     if request.method == 'GET':
-        return render_template('add_food.html')
+        # Check for existing food records for today
+        today_str = datetime.now().strftime('%Y-%m-%d')
+        db = SessionLocal()
+        preloaded_meals = None
+        try:
+            # Get the latest food record for today
+            last_record = db.query(FoodRecord).filter(
+                FoodRecord.user_id == current_user.id,
+                FoodRecord.date.like(f"{today_str}%")
+            ).order_by(FoodRecord.date.desc()).first()
+            
+            if last_record and last_record.meals:
+                preloaded_meals = last_record.meals # It's already a JSON string
+        finally:
+            db.close()
+            
+        return render_template('add_food.html', preloaded_meals=preloaded_meals)
     
     if request.method == 'POST':
         data = request.json
@@ -344,11 +360,17 @@ def generate_plots():
             food_data = pd.read_sql_query(food_query, conn, params={"user_id": user_id})
             
             if not food_data.empty:
+                # Filter to keep only the last record per day
+                food_data['date_obj'] = pd.to_datetime(food_data['date'])
+                food_data['date_only'] = food_data['date_obj'].dt.date.astype(str)
+                # Sort by date just in case, then group by date_only and take last
+                food_data = food_data.sort_values('date').groupby('date_only').last().reset_index()
+
                 meal_rows = []
                 macro_rows = {}
                 
                 for idx, row in food_data.iterrows():
-                    date_str = str(row['date']).split(' ')[0]
+                    date_str = row['date_only']
                     meals_cell = row.get('meals')
                     
                     if not meals_cell:

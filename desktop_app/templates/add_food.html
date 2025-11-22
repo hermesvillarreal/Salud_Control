@@ -162,6 +162,36 @@
             }
         }
 
+        // Preloaded data from backend
+        const preloadedMeals = {{ preloaded_meals | tojson | safe if preloaded_meals else 'null' }};
+
+        if (preloadedMeals) {
+            try {
+                const mealsData = typeof preloadedMeals === 'string' ? JSON.parse(preloadedMeals) : preloadedMeals;
+
+                meals.forEach(meal => {
+                    if (mealsData[meal.id]) {
+                        const m = mealsData[meal.id];
+                        // Set description
+                        if (m.description) {
+                            const descInput = document.getElementById(`desc-${meal.id}`);
+                            if (descInput) descInput.value = m.description;
+                        }
+                        // Set macros
+                        const pInput = document.querySelector(`input[name="meals[${meal.id}][protein]"]`);
+                        const cInput = document.querySelector(`input[name="meals[${meal.id}][carbs]"]`);
+                        const fInput = document.querySelector(`input[name="meals[${meal.id}][fat]"]`);
+
+                        if (pInput) pInput.value = m.protein || 0;
+                        if (cInput) cInput.value = m.carbs || 0;
+                        if (fInput) fInput.value = m.fat || 0;
+                    }
+                });
+            } catch (e) {
+                console.error("Error parsing preloaded meals:", e);
+            }
+        }
+
         document.getElementById('foodForm').addEventListener('submit', async function (e) {
             e.preventDefault();
             const submitBtn = this.querySelector('button[type="submit"]');
@@ -180,9 +210,15 @@
                 const p = parseFloat(document.querySelector(`input[name="meals[${meal.id}][protein]"]`).value) || 0;
                 const c = parseFloat(document.querySelector(`input[name="meals[${meal.id}][carbs]"]`).value) || 0;
                 const f = parseFloat(document.querySelector(`input[name="meals[${meal.id}][fat]"]`).value) || 0;
+                const desc = document.getElementById(`desc-${meal.id}`).value;
 
-                if (p > 0 || c > 0 || f > 0) {
-                    data.meals[meal.id] = { protein: p, carbs: c, fat: f };
+                if (p > 0 || c > 0 || f > 0 || desc) {
+                    data.meals[meal.id] = {
+                        protein: p,
+                        carbs: c,
+                        fat: f,
+                        description: desc
+                    };
                 }
             });
 
