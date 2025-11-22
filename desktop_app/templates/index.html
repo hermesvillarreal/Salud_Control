@@ -125,265 +125,146 @@
             <div id="analysis-content">
                 <p>Cargando análisis...</p>
             </div>
-            <!DOCTYPE html>
-            <html lang="es">
+        </div>
 
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Salud Control - Panel de Control</title>
-                <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-                <link rel="manifest" href="/static/manifest.json">
-                <meta name="theme-color" content="#4CAF50">
-                <link rel="apple-touch-icon" href="/static/icon.svg">
-                <link rel="stylesheet" href="/static/style.css">
-                <script>
-                    if ('serviceWorker' in navigator) {
-                        window.addEventListener('load', function () {
-                            navigator.serviceWorker.register('/service-worker.js').then(function (registration) {
-                                console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                            }, function (err) {
-                                console.log('ServiceWorker registration failed: ', err);
-                            });
-                        });
+        <!-- Floating Action Button -->
+        <a href="/add_record" class="fab" title="Nuevo Registro">+</a>
+
+        <script>
+            // Función para cargar los datos iniciales
+            async function loadData() {
+                const errorContainer = document.getElementById('error-container');
+                errorContainer.innerHTML = ''; // Clear previous errors
+
+                try {
+                    // Obtener estadísticas generales y últimos registros
+                    const respStats = await fetch('/health_data');
+                    if (!respStats.ok) throw new Error('Error al conectar con el servidor');
+
+                    const statsData = await respStats.json();
+                    if (statsData.status === 'success') {
+                        updateStats(statsData.data);
+                    } else {
+                        throw new Error(statsData.message || 'Error desconocido al cargar datos');
                     }
-                </script>
-            </head>
 
-            <body>
-                <div class="header">
-                    <h1>Panel de Control de Salud</h1>
-                    <div style="position: absolute; top: 20px; right: 20px;">
-                        <a href="/logout" style="color: white; text-decoration: none; font-weight: bold;">Cerrar
-                            Sesión</a>
-                    </div>
-                </div>
+                    // Obtener las gráficas generadas para el usuario actual
+                    const respPlots = await fetch('/generate_plots');
+                    if (!respPlots.ok) throw new Error('Error al generar gráficas');
 
-                <div class="container">
-                    <!-- Stats Section -->
-                    <div class="stats">
-                        <div class="stat-card">
-                            <h3>⚖️ Peso</h3>
-                            <div class="stat-value"><span id="last-weight">--</span> <small>kg</small></div>
-                            <div class="stat-label">Promedio: <span id="avg-weight">--</span> kg</div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>❤️ Presión Arterial</h3>
-                            <div class="stat-value"><span id="last-bp">--/--</span></div>
-                            <div class="stat-label">Promedio: <span id="avg-bp">--/--</span></div>
-                        </div>
-                        <div class="stat-card">
-                            <h3>🩸 Glucosa</h3>
-                            <div class="stat-value"><span id="last-glucose">--</span> <small>mg/dL</small></div>
-                            <div class="stat-label">Promedio: <span id="avg-glucose">--</span> mg/dL</div>
-                        </div>
-                    </div>
+                    const plots = await respPlots.json();
+                    updatePlots(plots);
 
-                    <!-- Charts Section -->
-                    <div id="charts-container">
-                        <div class="chart">
-                            <h2>📉 Evolución del Peso
-                                <div class="tooltip-container">
-                                    <span class="info-icon">?</span>
-                                    <span class="tooltip-text">Muestra el último registro de peso de cada día para
-                                        observar
-                                        tendencias a largo plazo.</span>
-                                </div>
-                            </h2>
-                            <div id="weight-chart" class="chart-content">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
-
-                        <div class="chart">
-                            <h2>💓 Presión Arterial
-                                <div class="tooltip-container">
-                                    <span class="info-icon">?</span>
-                                    <span class="tooltip-text">Compara la presión sistólica (alta) y diastólica (baja) a
-                                        lo largo
-                                        del tiempo.</span>
-                                </div>
-                            </h2>
-                            <div id="bp-chart" class="chart-content">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
-
-                        <div class="chart">
-                            <h2>🍬 Niveles de Glucosa
-                                <div class="tooltip-container">
-                                    <span class="info-icon">?</span>
-                                    <span class="tooltip-text">Seguimiento de los niveles de azúcar en sangre
-                                        registrados.</span>
-                                </div>
-                            </h2>
-                            <div id="glucose-chart" class="chart-content">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
-
-                        <div class="chart">
-                            <h2>🍽️ Calorías por Comida (g)
-                                <div class="tooltip-container">
-                                    <span class="info-icon">?</span>
-                                    <span class="tooltip-text">Suma total de gramos (Proteína + Carbos + Grasa)
-                                        consumidos en cada
-                                        tipo de comida por día.</span>
-                                </div>
-                            </h2>
-                            <div id="meals-by-day-chart" class="chart-content">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
-
-                        <div class="chart">
-                            <h2>📊 Macronutrientes Diarios
-                                <div class="tooltip-container">
-                                    <span class="info-icon">?</span>
-                                    <span class="tooltip-text">Distribución diaria total de Proteínas, Carbohidratos y
-                                        Grasas.</span>
-                                </div>
-                            </h2>
-                            <div id="macros-by-day-chart" class="chart-content">
-                                <div class="loading-spinner"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="error-container"></div>
-
-                    <div id="analysis-section" class="card">
-                        <h2>🤖 Análisis de Datos</h2>
-                        <div id="analysis-content">
-                            <p>Cargando análisis...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Floating Action Button -->
-                <a href="/add_record" class="fab" title="Nuevo Registro">+</a>
-
-                <script>
-                    // Función para cargar los datos iniciales
-                    async function loadData() {
-                        const errorContainer = document.getElementById('error-container');
-                        errorContainer.innerHTML = ''; // Clear previous errors
-
-                        try {
-                            // Obtener estadísticas generales y últimos registros
-                            const respStats = await fetch('/health_data');
-                            if (!respStats.ok) throw new Error('Error al conectar con el servidor');
-
-                            const statsData = await respStats.json();
-                            if (statsData.status === 'success') {
-                                updateStats(statsData.data);
-                            } else {
-                                throw new Error(statsData.message || 'Error desconocido al cargar datos');
-                            }
-
-                            // Obtener las gráficas generadas para el usuario actual
-                            const respPlots = await fetch('/generate_plots');
-                            if (!respPlots.ok) throw new Error('Error al generar gráficas');
-
-                            const plots = await respPlots.json();
-                            updatePlots(plots);
-
-                        } catch (error) {
-                            console.error('Error loading data:', error);
-                            showError(`No se pudieron cargar los datos: ${error.message}. <br> Asegúrate de que el servidor esté corriendo.`);
-                            // Remove spinners if error
-                            document.querySelectorAll('.loading-spinner').forEach(el => el.style.display = 'none');
+                    // Obtener análisis
+                    const respAnalysis = await fetch('/analyze');
+                    if (respAnalysis.ok) {
+                        const analysisData = await respAnalysis.json();
+                        const analysisContent = document.getElementById('analysis-content');
+                        if (analysisData.ai_analysis) {
+                            analysisContent.innerHTML = `<p>${analysisData.ai_analysis.replace(/\n/g, '<br>')}</p>`;
+                        } else if (analysisData.analysis) {
+                            analysisContent.innerHTML = `<p>${analysisData.analysis.replace(/\n/g, '<br>')}</p>`;
+                        } else {
+                            analysisContent.innerHTML = '<p>No se pudo generar el análisis.</p>';
                         }
                     }
 
-                    function showError(message) {
-                        const container = document.getElementById('error-container');
-                        container.innerHTML = `<div class="error-message">${message}</div>`;
-                    }
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    showError(`No se pudieron cargar los datos: ${error.message}. <br> Asegúrate de que el servidor esté corriendo.`);
+                    // Remove spinners if error
+                    document.querySelectorAll('.loading-spinner').forEach(el => el.style.display = 'none');
+                }
+            }
 
-                    // Función para actualizar las estadísticas
-                    function updateStats(data) {
-                        if (data.length > 0) {
-                            // Find last valid weight
-                            let lastWeight = '--';
-                            for (let i = data.length - 1; i >= 0; i--) {
-                                if (data[i].weight > 0) {
-                                    lastWeight = data[i].weight;
-                                    break;
-                                }
-                            }
-                            document.getElementById('last-weight').textContent = lastWeight;
+            function showError(message) {
+                const container = document.getElementById('error-container');
+                container.innerHTML = `<div class="error-message">${message}</div>`;
+            }
 
-                            // Find last valid BP
-                            let lastBP = '--/--';
-                            for (let i = data.length - 1; i >= 0; i--) {
-                                if (data[i].blood_pressure_sys > 0 && data[i].blood_pressure_dia > 0) {
-                                    lastBP = `${data[i].blood_pressure_sys}/${data[i].blood_pressure_dia}`;
-                                    break;
-                                }
-                            }
-                            document.getElementById('last-bp').textContent = lastBP;
-
-                            // Find last valid Glucose
-                            let lastGlucose = '--';
-                            for (let i = data.length - 1; i >= 0; i--) {
-                                if (data[i].glucose_level > 0) {
-                                    lastGlucose = data[i].glucose_level;
-                                    break;
-                                }
-                            }
-                            document.getElementById('last-glucose').textContent = lastGlucose;
-
-                            // Calcular promedios (filtrando valores nulos/cero)
-                            const validWeights = data.filter(d => d.weight > 0);
-                            const avgWeight = validWeights.length ? validWeights.reduce((sum, d) => sum + d.weight, 0) / validWeights.length : 0;
-
-                            const validSys = data.filter(d => d.blood_pressure_sys > 0);
-                            const avgSys = validSys.length ? validSys.reduce((sum, d) => sum + d.blood_pressure_sys, 0) / validSys.length : 0;
-                            const avgDia = validSys.length ? validSys.reduce((sum, d) => sum + d.blood_pressure_dia, 0) / validSys.length : 0;
-
-                            const validGlu = data.filter(d => d.glucose_level > 0);
-                            const avgGlucose = validGlu.length ? validGlu.reduce((sum, d) => sum + d.glucose_level, 0) / validGlu.length : 0;
-
-                            document.getElementById('avg-weight').textContent = avgWeight ? avgWeight.toFixed(1) : '--';
-                            document.getElementById('avg-bp').textContent = avgSys ? `${avgSys.toFixed(0)}/${avgDia.toFixed(0)}` : '--/--';
-                            document.getElementById('avg-glucose').textContent = avgGlucose ? avgGlucose.toFixed(1) : '--';
+            // Función para actualizar las estadísticas
+            function updateStats(data) {
+                if (data.length > 0) {
+                    // Find last valid weight
+                    let lastWeight = '--';
+                    for (let i = data.length - 1; i >= 0; i--) {
+                        if (data[i].weight > 0) {
+                            lastWeight = data[i].weight;
+                            break;
                         }
                     }
+                    document.getElementById('last-weight').textContent = lastWeight;
 
-                    // Función para actualizar las gráficas
-                    function updatePlots(plots) {
-                        const config = { responsive: true, displayModeBar: false };
-                        const layoutUpdate = {
-                            paper_bgcolor: 'rgba(0,0,0,0)',
-                            plot_bgcolor: 'rgba(0,0,0,0)',
-                            font: { family: 'Segoe UI, sans-serif' },
-                            margin: { t: 10, l: 40, r: 20, b: 40 }
-                        };
-
-                        function renderPlot(id, plotData) {
-                            const container = document.getElementById(id);
-                            container.innerHTML = ''; // Remove spinner
-                            if (plotData) {
-                                const data = JSON.parse(plotData);
-                                // Merge layout updates
-                                data.layout = { ...data.layout, ...layoutUpdate };
-                                Plotly.newPlot(id, data.data, data.layout, config);
-                            } else {
-                                container.innerHTML = '<p style="text-align:center; color:#888;">No hay datos suficientes</p>';
-                            }
+                    // Find last valid BP
+                    let lastBP = '--/--';
+                    for (let i = data.length - 1; i >= 0; i--) {
+                        if (data[i].blood_pressure_sys > 0 && data[i].blood_pressure_dia > 0) {
+                            lastBP = `${data[i].blood_pressure_sys}/${data[i].blood_pressure_dia}`;
+                            break;
                         }
-
-                        renderPlot('weight-chart', plots.weight);
-                        renderPlot('bp-chart', plots.blood_pressure);
-                        renderPlot('glucose-chart', plots.glucose);
-                        renderPlot('meals-by-day-chart', plots.meals_by_day);
-                        renderPlot('macros-by-day-chart', plots.macros_by_day);
                     }
+                    document.getElementById('last-bp').textContent = lastBP;
 
-                    // Cargar datos cuando la página se carga
-                    document.addEventListener('DOMContentLoaded', loadData);
-                </script>
-            </body>
+                    // Find last valid Glucose
+                    let lastGlucose = '--';
+                    for (let i = data.length - 1; i >= 0; i--) {
+                        if (data[i].glucose_level > 0) {
+                            lastGlucose = data[i].glucose_level;
+                            break;
+                        }
+                    }
+                    document.getElementById('last-glucose').textContent = lastGlucose;
 
-            </html>
+                    // Calcular promedios (filtrando valores nulos/cero)
+                    const validWeights = data.filter(d => d.weight > 0);
+                    const avgWeight = validWeights.length ? validWeights.reduce((sum, d) => sum + d.weight, 0) / validWeights.length : 0;
+
+                    const validSys = data.filter(d => d.blood_pressure_sys > 0);
+                    const avgSys = validSys.length ? validSys.reduce((sum, d) => sum + d.blood_pressure_sys, 0) / validSys.length : 0;
+                    const avgDia = validSys.length ? validSys.reduce((sum, d) => sum + d.blood_pressure_dia, 0) / validSys.length : 0;
+
+                    const validGlu = data.filter(d => d.glucose_level > 0);
+                    const avgGlucose = validGlu.length ? validGlu.reduce((sum, d) => sum + d.glucose_level, 0) / validGlu.length : 0;
+
+                    document.getElementById('avg-weight').textContent = avgWeight ? avgWeight.toFixed(1) : '--';
+                    document.getElementById('avg-bp').textContent = avgSys ? `${avgSys.toFixed(0)}/${avgDia.toFixed(0)}` : '--/--';
+                    document.getElementById('avg-glucose').textContent = avgGlucose ? avgGlucose.toFixed(1) : '--';
+                }
+            }
+
+            // Función para actualizar las gráficas
+            function updatePlots(plots) {
+                const config = { responsive: true, displayModeBar: false };
+                const layoutUpdate = {
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: { family: 'Segoe UI, sans-serif' },
+                    margin: { t: 10, l: 40, r: 20, b: 40 }
+                };
+
+                function renderPlot(id, plotData) {
+                    const container = document.getElementById(id);
+                    container.innerHTML = ''; // Remove spinner
+                    if (plotData) {
+                        const data = JSON.parse(plotData);
+                        // Merge layout updates
+                        data.layout = { ...data.layout, ...layoutUpdate };
+                        Plotly.newPlot(id, data.data, data.layout, config);
+                    } else {
+                        container.innerHTML = '<p style="text-align:center; color:#888;">No hay datos suficientes</p>';
+                    }
+                }
+
+                renderPlot('weight-chart', plots.weight);
+                renderPlot('bp-chart', plots.blood_pressure);
+                renderPlot('glucose-chart', plots.glucose);
+                renderPlot('meals-by-day-chart', plots.meals_by_day);
+                renderPlot('macros-by-day-chart', plots.macros_by_day);
+            }
+
+            // Cargar datos cuando la página se carga
+            document.addEventListener('DOMContentLoaded', loadData);
+        </script>
+</body>
+
+</html>

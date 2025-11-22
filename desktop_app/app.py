@@ -8,7 +8,7 @@ import os
 import openai
 import json
 from database import SessionLocal, engine
-from models import Base, User, HealthRecord
+from models import Base, User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from services import get_or_create_user, create_health_record
@@ -237,175 +237,138 @@ def add_food():
         finally:
             db.close()
 
-
 @app.route("/generate_plots")
 @login_required
 def generate_plots():
     user_id = current_user.id
-    try:
-        # Use pandas with SQLAlchemy engine
-        query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level, meals FROM health_records WHERE user_id = :user_id ORDER BY date")
-        with engine.connect() as conn:
-            data = pd.read_sql_query(query, conn, params={"user_id": user_id})
-
-        #print(data.head())
-        
-        if data.empty:
-            # Return empty plots structure instead of 404 to avoid breaking frontend
-            return jsonify({})
-        
-        # Generate plots
-        plots = {}
-        
-        # Weight over time: use the last measurement of each day
-        try:
-            data['date'] = pd.to_datetime(data['date'])
-            # ensure weight is numeric and drop invalid/zero values before aggregating
-            data['weight'] = pd.to_numeric(data['weight'], errors='coerce')
-            data = data.sort_values('date')
-            data['date_only'] = data['date'].dt.date.astype(str)
-            # drop rows without a valid positive weight to avoid plotting 0 or NaN
-            valid_weights = data.dropna(subset=['weight'])
-            valid_weights = valid_weights[valid_weights['weight'] > 0]
-            if not valid_weights.empty:
-                daily_weight = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
-                #print('Daily weight data:\n', daily_weight)
-                
-                # Ensure weight column is float
-                daily_weight['weight'] = daily_weight['weight'].astype(float)
-                
-                # Calculate y-axis range with padding
-                min_weight = daily_weight['weight'].min()
-                max_weight = daily_weight['weight'].max()
-                weight_range = max_weight - min_weight
-                
-                # If all weights are the same or very close, add padding
-                if weight_range < 1:
-                    y_min = min_weight - 5
-                    y_max = max_weight + 5
-                else:
-                    padding = weight_range * 0.1
-                    y_min = min_weight - padding
-                    y_max = max_weight + padding
-                
-                fig_weight = px.bar(daily_weight, x='date_only', y='weight', title='Weight Over Time', markers=True)
-                fig_weight.update_traces(
-                    mode='lines+markers',           # Línea con marcadores
-                    line=dict(color='#4CAF50', width=3),  # Línea verde, grosor 3
-                    marker=dict(size=10, color='#2E7D32', line=dict(width=2, color='white'))  # Marcadores grandes
-                )
-                fig_weight.update_layout(
-                    yaxis_title='Peso (kg)',
-                    xaxis_title='Fecha',
-                    yaxis=dict(range=[y_min, y_max]),  # Use calculated range
-                    hovermode='x unified',        # Tooltip unificado
-                    plot_bgcolor='white',         # Fondo blanco
-                    font=dict(size=12)
-                )
-                plots['weight'] = fig_weight.to_json()
-            else:
-                # fallback to raw data if no valid weights
-                fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-                fig_weight.update_traces(mode='lines+markers')
-                fig_weight.update_layout(yaxis_title='Peso (kg)')
-                plots["weight"] = fig_weight.to_json()
-        except Exception as e:
-            # fallback to raw plot if anything goes wrong
-            fig_weight = px.line(data, x="date", y="weight", title="Weight Over Time")
-            #fig_weight.update_traces(mode='lines+markers')
-            fig_weight.update_layout(yaxis_title='Peso (kg)')
-            plots["weight"] = fig_weight.to_json()
-        
-        valid_sys = data.dropna(subset=['blood_pressure_sys']).reset_index(drop=True)
-        valid_sys = valid_sys[valid_sys['blood_pressure_sys'] > 0].reset_index(drop=True)
-        valid_sys['blood_pressure_sys'] = pd.to_numeric(valid_sys['blood_pressure_sys'], errors='coerce')
-        valid_sys = valid_sys.dropna(subset=['blood_pressure_sys']).reset_index(drop=True)
+    plots = {}
     
-        #print('Daily Systolic data:\n', valid_sys[['date', 'blood_pressure_sys']])
+    try:
+        with engine.connect() as conn:
+            # 1. Weight Data
+            weight_query = text("SELECT date, weight FROM weight_records WHERE user_id = :user_id ORDER BY date")
+            weight_data = pd.read_sql_query(weight_query, conn, params={"user_id": user_id})
+            
+            if not weight_data.empty:
+                weight_data['date'] = pd.to_datetime(weight_data['date'])
+                weight_data['weight'] = pd.to_numeric(weight_data['weight'], errors='coerce')
+                weight_data = weight_data.dropna(subset=['weight'])
+                weight_data = weight_data[weight_data['weight'] > 0].sort_values('date')
+                
+                if not weight_data.empty:
+                    weight_data['date_only'] = weight_data['date'].dt.date.astype(str)
+                    daily_weight = weight_data.groupby('date_only', as_index=False).agg({'weight': 'last'})
+                    
+                    # Calculate range
+                    min_w = daily_weight['weight'].min()
+                    max_w = daily_weight['weight'].max()
+                    padding = max(1.0, (max_w - min_w) * 0.1)
+                    
+                    fig_weight = px.bar(daily_weight, x='date_only', y='weight', title='Weight Over Time')
+                    fig_weight.update_traces(
+                        marker=dict(color='#4CAF50', line=dict(width=1, color='white'))
+                    )
+                    fig_weight.update_layout(
+                        yaxis_title='Peso (kg)',
+                        xaxis_title='Fecha',
+                        yaxis=dict(range=[min_w - padding, max_w + padding]),
+                        plot_bgcolor='white'
+                    )
+                    plots['weight'] = fig_weight.to_json()
 
-        valid_dia = data.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
-        valid_dia = valid_dia[valid_dia['blood_pressure_dia'] > 0].reset_index(drop=True)
-        valid_dia['blood_pressure_dia'] = pd.to_numeric(valid_dia['blood_pressure_dia'], errors='coerce')
-        valid_dia = valid_dia.dropna(subset=['blood_pressure_dia']).reset_index(drop=True)
+            # 2. Blood Pressure Data
+            bp_query = text("SELECT date, systolic as blood_pressure_sys, diastolic as blood_pressure_dia FROM blood_pressure_records WHERE user_id = :user_id ORDER BY date")
+            bp_data = pd.read_sql_query(bp_query, conn, params={"user_id": user_id})
+            
+            if not bp_data.empty:
+                bp_data['date'] = pd.to_datetime(bp_data['date'])
+                bp_data['blood_pressure_sys'] = pd.to_numeric(bp_data['blood_pressure_sys'], errors='coerce')
+                bp_data['blood_pressure_dia'] = pd.to_numeric(bp_data['blood_pressure_dia'], errors='coerce')
+                bp_data = bp_data.dropna(subset=['blood_pressure_sys', 'blood_pressure_dia'])
+                bp_data = bp_data[(bp_data['blood_pressure_sys'] > 0) & (bp_data['blood_pressure_dia'] > 0)].sort_values('date')
 
-        #print('Daily Diastolic data:\n', valid_dia[['date', 'blood_pressure_dia']])
+                if not bp_data.empty:
+                    fig_bp = go.Figure()
+                    fig_bp.add_trace(go.Scatter(x=bp_data["date"], y=bp_data["blood_pressure_sys"], name="Sistólica", mode='lines+markers'))
+                    fig_bp.add_trace(go.Scatter(x=bp_data["date"], y=bp_data["blood_pressure_dia"], name="Diastólica", mode='lines+markers'))
+                    fig_bp.update_layout(title="Blood Pressure Over Time", yaxis_title='Presión (mmHg)')
+                    plots["blood_pressure"] = fig_bp.to_json()
 
-        # Blood pressure
-        fig_bp = go.Figure()
-        fig_bp.add_trace(go.Scatter(x=valid_sys["date"].values, y=valid_sys["blood_pressure_sys"].values, name="Sistólica", mode='lines+markers'))
-        fig_bp.add_trace(go.Scatter(x=valid_dia["date"].values, y=valid_dia["blood_pressure_dia"].values, name="Diastólica", mode='lines+markers'))
-        fig_bp.update_layout(title="Blood Pressure Over Time", yaxis_title='Presión (mmHg)')
-        plots["blood_pressure"] = fig_bp.to_json()
-        
-        # Glucose levels
-        valid_glu = data.dropna(subset=['glucose_level']).reset_index(drop=True)
-        valid_glu = valid_glu[valid_glu['glucose_level'] > 0].reset_index(drop=True)
-        valid_glu['glucose_level'] = pd.to_numeric(valid_glu['glucose_level'], errors='coerce')
+            # 3. Glucose Data
+            glucose_query = text("SELECT date, glucose_level FROM glucose_records WHERE user_id = :user_id ORDER BY date")
+            glucose_data = pd.read_sql_query(glucose_query, conn, params={"user_id": user_id})
+            
+            if not glucose_data.empty:
+                glucose_data['date'] = pd.to_datetime(glucose_data['date'])
+                glucose_data['glucose_level'] = pd.to_numeric(glucose_data['glucose_level'], errors='coerce')
+                glucose_data = glucose_data.dropna(subset=['glucose_level'])
+                glucose_data = glucose_data[glucose_data['glucose_level'] > 0].sort_values('date')
+                
+                if not glucose_data.empty:
+                    fig_glucose = px.line(glucose_data, x="date", y="glucose_level", title="Glucose Levels Over Time")
+                    fig_glucose.update_traces(mode='lines+markers')
+                    fig_glucose.update_layout(yaxis_title='Glucosa (mg/dL)')
+                    plots["glucose"] = fig_glucose.to_json()
 
-        #print('Daily Glucose data:\n', valid_glu[['date', 'glucose_level']])
-
-        fig_glucose = px.line(valid_glu, x="date", y="glucose_level", title="Glucose Levels Over Time")
-        fig_glucose.update_traces(mode='lines+markers')
-        fig_glucose.update_layout(yaxis_title='Glucosa (mg/dL)')
-        plots["glucose"] = fig_glucose.to_json()
-
-        # Parse meals (stored as JSON text) and create aggregated dataframes
-        try:
-            # Ensure meals column exists
-            if 'meals' in data.columns:
-                # Build per-day-per-meal summed grams (protein+carbs+fat)
+            # 4. Food Data
+            food_query = text("SELECT date, meals FROM food_records WHERE user_id = :user_id ORDER BY date")
+            food_data = pd.read_sql_query(food_query, conn, params={"user_id": user_id})
+            
+            if not food_data.empty:
                 meal_rows = []
                 macro_rows = {}
-
-                for idx, row in data.iterrows():
-                    date = str(row['date']).split(' ')[0]
+                
+                for idx, row in food_data.iterrows():
+                    date_str = str(row['date']).split(' ')[0]
                     meals_cell = row.get('meals')
-                    if not meals_cell or pd.isna(meals_cell):
+                    
+                    if not meals_cell:
                         continue
+                        
                     try:
                         meals = json.loads(meals_cell) if isinstance(meals_cell, str) else meals_cell
                     except Exception:
-                        meals = meals_cell
-
-                    # Initialize macro totals for the day
-                    if date not in macro_rows:
-                        macro_rows[date] = {'date': date, 'protein': 0, 'carbs': 0, 'fat': 0}
-
-                    for meal_name, meal_data in (meals.items() if isinstance(meals, dict) else []):
-                        if not isinstance(meal_data, dict):
-                            continue
-                        p = float(meal_data.get('protein', 0) or 0)
-                        c = float(meal_data.get('carbs', 0) or 0)
-                        f = float(meal_data.get('fat', 0) or 0)
-                        total_grams = p + c + f
-                        meal_rows.append({'date': date, 'meal': meal_name, 'grams': total_grams, 'protein': p, 'carbs': c, 'fat': f})
-
-                        # accumulate per-day macros
-                        macro_rows[date]['protein'] += p
-                        macro_rows[date]['carbs'] += c
-                        macro_rows[date]['fat'] += f
-
+                        continue
+                        
+                    if date_str not in macro_rows:
+                        macro_rows[date_str] = {'date': date_str, 'protein': 0, 'carbs': 0, 'fat': 0}
+                        
+                    if isinstance(meals, dict):
+                        for meal_name, meal_data in meals.items():
+                            if isinstance(meal_data, dict):
+                                p = float(meal_data.get('protein', 0) or 0)
+                                c = float(meal_data.get('carbs', 0) or 0)
+                                f = float(meal_data.get('fat', 0) or 0)
+                                total_grams = p + c + f
+                                
+                                meal_rows.append({
+                                    'date': date_str, 
+                                    'meal': meal_name, 
+                                    'grams': total_grams
+                                })
+                                
+                                macro_rows[date_str]['protein'] += p
+                                macro_rows[date_str]['carbs'] += c
+                                macro_rows[date_str]['fat'] += f
+                
                 if meal_rows:
                     meals_df = pd.DataFrame(meal_rows)
-                    # Plot: grams per day by meal (stacked/grouped)
                     fig_meals = px.bar(meals_df, x='date', y='grams', color='meal', title='Por día / Comida (g totales)')
                     plots['meals_by_day'] = fig_meals.to_json()
-
+                    
                 if macro_rows:
                     macro_df = pd.DataFrame(list(macro_rows.values())).sort_values('date')
-                    # Plot: macronutrients over time (each nutrient as a separate line)
                     fig_macros = go.Figure()
                     fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['protein'], name='Proteínas (g)'))
                     fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['carbs'], name='Carbohidratos (g)'))
                     fig_macros.add_trace(go.Bar(x=macro_df['date'], y=macro_df['fat'], name='Grasas (g)'))
                     fig_macros.update_layout(barmode='stack', title='Macronutrientes por día (g)')
                     plots['macros_by_day'] = fig_macros.to_json()
-        except Exception as e:
-            # don't fail entire request if meal parsing/plotting fails
-            plots['meals_by_day_error'] = str(e)
-        
+
         return jsonify(plots)
+
     except Exception as e:
+        print(f"Error generating plots: {e}")
         return jsonify({"error": str(e)}), 500
 
 def basic_analysis(data):
@@ -467,27 +430,65 @@ def save_local_report(data):
 def analyze_health_data():
     user_id = current_user.id
     try:
-        query = text("SELECT date, weight, blood_pressure_sys, blood_pressure_dia, glucose_level FROM health_records WHERE user_id = :user_id ORDER BY date")
+        stats = {
+            "weight": {"mean": 0, "trend": "insufficient data"},
+            "blood_pressure": {"sys_mean": 0, "dia_mean": 0},
+            "glucose": {"mean": 0, "std": 0}
+        }
+        
         with engine.connect() as conn:
-            data = pd.read_sql_query(query, conn, params={"user_id": user_id})
+            # Weight Analysis
+            w_query = text("SELECT weight FROM weight_records WHERE user_id = :user_id ORDER BY date")
+            w_data = pd.read_sql_query(w_query, conn, params={"user_id": user_id})
+            if not w_data.empty:
+                w_data['weight'] = pd.to_numeric(w_data['weight'], errors='coerce')
+                w_data = w_data[w_data['weight'] > 0]
+                if not w_data.empty:
+                    stats["weight"]["mean"] = w_data["weight"].mean()
+                    if len(w_data) > 1:
+                        stats["weight"]["trend"] = "increasing" if w_data["weight"].diff().mean() > 0 else "decreasing"
+
+            # BP Analysis
+            bp_query = text("SELECT systolic, diastolic FROM blood_pressure_records WHERE user_id = :user_id")
+            bp_data = pd.read_sql_query(bp_query, conn, params={"user_id": user_id})
+            if not bp_data.empty:
+                bp_data['systolic'] = pd.to_numeric(bp_data['systolic'], errors='coerce')
+                bp_data['diastolic'] = pd.to_numeric(bp_data['diastolic'], errors='coerce')
+                bp_data = bp_data[(bp_data['systolic'] > 0) & (bp_data['diastolic'] > 0)]
+                if not bp_data.empty:
+                    stats["blood_pressure"]["sys_mean"] = bp_data["systolic"].mean()
+                    stats["blood_pressure"]["dia_mean"] = bp_data["diastolic"].mean()
+
+            # Glucose Analysis
+            g_query = text("SELECT glucose_level FROM glucose_records WHERE user_id = :user_id")
+            g_data = pd.read_sql_query(g_query, conn, params={"user_id": user_id})
+            if not g_data.empty:
+                g_data['glucose_level'] = pd.to_numeric(g_data['glucose_level'], errors='coerce')
+                g_data = g_data[g_data['glucose_level'] > 0]
+                if not g_data.empty:
+                    stats["glucose"]["mean"] = g_data["glucose_level"].mean()
+                    stats["glucose"]["std"] = g_data["glucose_level"].std() if len(g_data) > 1 else 0
+
+        analysis = f"""
+        Análisis básico de salud:
+        - Peso promedio: {stats['weight']['mean']:.1f}kg (Tendencia: {stats['weight']['trend']})
+        - Presión arterial promedio: {stats['blood_pressure']['sys_mean']:.0f}/{stats['blood_pressure']['dia_mean']:.0f}
+        - Glucosa promedio: {stats['glucose']['mean']:.1f} (Desviación estándar: {stats['glucose']['std']:.1f})
+        """
         
-        if data.empty:
-            return jsonify({"error": "No records found"}), 404
-            
-        # Realizar análisis básico
-        analysis_result = basic_analysis(data)
+        analysis_result = {
+            "statistics": stats,
+            "analysis": analysis
+        }
         
-        # Si la API de OpenAI está disponible, agregar análisis de IA
+        # AI Analysis if enabled
         if openai_api_key:
             try:
                 analysis_prompt = f"""
                 Analyze the following health metrics:
-                Weight: Mean {analysis_result['statistics']['weight']['mean']:.1f}kg, 
-                       Trend: {analysis_result['statistics']['weight']['trend']}
-                Blood Pressure: Mean {analysis_result['statistics']['blood_pressure']['sys_mean']:.0f}/
-                              {analysis_result['statistics']['blood_pressure']['dia_mean']:.0f}
-                Glucose: Mean {analysis_result['statistics']['glucose']['mean']:.1f}, 
-                        Standard Deviation {analysis_result['statistics']['glucose']['std']:.1f}
+                Weight: Mean {stats['weight']['mean']:.1f}kg, Trend: {stats['weight']['trend']}
+                Blood Pressure: Mean {stats['blood_pressure']['sys_mean']:.0f}/{stats['blood_pressure']['dia_mean']:.0f}
+                Glucose: Mean {stats['glucose']['mean']:.1f}, Standard Deviation {stats['glucose']['std']:.1f}
                 
                 Provide a brief health analysis and recommendations.
                 """
@@ -506,54 +507,6 @@ def analyze_health_data():
         return jsonify(analysis_result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-    # Calculate basic statistics (Unreachable code in original, kept for safety if flow changes)
-    stats = {
-        "weight": {
-            "mean": data["weight"].mean(),
-            "trend": "increasing" if data["weight"].diff().mean() > 0 else "decreasing"
-        },
-        "blood_pressure": {
-            "sys_mean": data["blood_pressure_sys"].mean(),
-            "dia_mean": data["blood_pressure_dia"].mean()
-        },
-        "glucose": {
-            "mean": data["glucose_level"].mean(),
-            "std": data["glucose_level"].std()
-        }
-    }
-    
-    # Generate AI analysis
-    analysis_prompt = f"""
-    Analyze the following health metrics:
-    Weight: Mean {stats['weight']['mean']:.1f}kg, Trend: {stats['weight']['trend']}
-    Blood Pressure: Mean {stats['blood_pressure']['sys_mean']:.0f}/{stats['blood_pressure']['dia_mean']:.0f}
-    Glucose: Mean {stats['glucose']['mean']:.1f}, Standard Deviation {stats['glucose']['std']:.1f}
-    
-    Provide a brief health analysis and recommendations.
-    """
-    
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a health analysis assistant."},
-                {"role": "user", "content": analysis_prompt}
-            ]
-        )
-        ai_analysis = response.choices[0].message.content
-    except Exception as e:
-        ai_analysis = f"AI analysis unavailable: {str(e)}"
-    
-    return jsonify({
-        "statistics": stats,
-        "ai_analysis": ai_analysis
-    })
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 def send_report(data):
     """Guarda el reporte localmente ya que WhatsApp no está configurado"""
@@ -563,70 +516,75 @@ def send_report(data):
 @login_required
 def get_health_data():
     try:
-        query = text('''
-            SELECT u.name, u.email, u.phone, h.date, h.weight, 
-                   h.blood_pressure_sys, h.blood_pressure_dia, h.glucose_level, h.meals
-            FROM users u
-            JOIN health_records h ON u.id = h.user_id
-            WHERE u.id = :user_id
-        ''')
+        user_id = current_user.id
+        all_data = []
+        
         with engine.connect() as conn:
-            data = pd.read_sql_query(query, conn, params={"user_id": current_user.id})
-        
-        # Convert to DataFrame
-        # columns are inferred by read_sql_query
-        df = data
-        
-        # Generate basic plots
-        plots = {}
-        if not df.empty:
-            # Weight plot (last measurement per day)
-            try:
-                df['date'] = pd.to_datetime(df['date'])
-                df['weight'] = pd.to_numeric(df['weight'], errors='coerce')
-                df = df.sort_values('date')
-                df['date_only'] = df['date'].dt.date.astype(str)
-                valid_weights = df.dropna(subset=['weight'])
-                valid_weights = valid_weights[valid_weights['weight'] > 0]
-                if not valid_weights.empty:
-                    daily_df = valid_weights.groupby('date_only', as_index=False).agg({'weight': 'last'})
-                    fig_weight = px.line(daily_df, x='date_only', y='weight', title='Weight Over Time')
-                    fig_weight.update_traces(mode='lines+markers')
-                    fig_weight.update_layout(yaxis_title='Peso (kg)')
-                    plots['weight'] = fig_weight.to_json()
-                else:
-                    fig_weight = px.line(df, x='date', y='weight', title='Weight Over Time')
-                    fig_weight.update_traces(mode='lines+markers')
-                    fig_weight.update_layout(yaxis_title='Peso (kg)')
-                    plots['weight'] = fig_weight.to_json()
-            except Exception:
-                fig_weight = px.line(df, x='date', y='weight', title='Weight Over Time')
-                fig_weight.update_traces(mode='lines+markers')
-                fig_weight.update_layout(yaxis_title='Peso (kg)')
-                plots['weight'] = fig_weight.to_json()
-            
-            # Blood pressure plot
-            fig_bp = px.line(df, x='date', y=['blood_pressure_sys', 'blood_pressure_dia'], 
-                           title='Blood Pressure Over Time')
-            plots['blood_pressure'] = fig_bp.to_json()
-            
-            # Glucose plot
-            fig_glucose = px.line(df, x='date', y='glucose_level',
-                                title='Glucose Levels Over Time')
-            plots['glucose'] = fig_glucose.to_json()
-            # Parse meals JSON into dicts for the API response
-            if 'meals' in df.columns:
-                def parse_meals_cell(x):
-                    try:
-                        return json.loads(x) if isinstance(x, str) and x else x
-                    except Exception:
-                        return x
-                df['meals'] = df['meals'].apply(parse_meals_cell)
+            # 1. Weight
+            w_query = text("SELECT date, weight FROM weight_records WHERE user_id = :user_id")
+            w_rows = conn.execute(w_query, {"user_id": user_id}).fetchall()
+            for row in w_rows:
+                all_data.append({
+                    "date": row.date,
+                    "weight": row.weight,
+                    "blood_pressure_sys": None,
+                    "blood_pressure_dia": None,
+                    "glucose_level": None,
+                    "meals": None
+                })
+                
+            # 2. BP
+            bp_query = text("SELECT date, systolic, diastolic FROM blood_pressure_records WHERE user_id = :user_id")
+            bp_rows = conn.execute(bp_query, {"user_id": user_id}).fetchall()
+            for row in bp_rows:
+                all_data.append({
+                    "date": row.date,
+                    "weight": None,
+                    "blood_pressure_sys": row.systolic,
+                    "blood_pressure_dia": row.diastolic,
+                    "glucose_level": None,
+                    "meals": None
+                })
+                
+            # 3. Glucose
+            g_query = text("SELECT date, glucose_level FROM glucose_records WHERE user_id = :user_id")
+            g_rows = conn.execute(g_query, {"user_id": user_id}).fetchall()
+            for row in g_rows:
+                all_data.append({
+                    "date": row.date,
+                    "weight": None,
+                    "blood_pressure_sys": None,
+                    "blood_pressure_dia": None,
+                    "glucose_level": row.glucose_level,
+                    "meals": None
+                })
+                
+            # 4. Food
+            f_query = text("SELECT date, meals FROM food_records WHERE user_id = :user_id")
+            f_rows = conn.execute(f_query, {"user_id": user_id}).fetchall()
+            for row in f_rows:
+                meals_parsed = None
+                try:
+                    if row.meals:
+                        meals_parsed = json.loads(row.meals) if isinstance(row.meals, str) else row.meals
+                except:
+                    pass
+                    
+                all_data.append({
+                    "date": row.date,
+                    "weight": None,
+                    "blood_pressure_sys": None,
+                    "blood_pressure_dia": None,
+                    "glucose_level": None,
+                    "meals": meals_parsed
+                })
+
+        # Sort by date
+        all_data.sort(key=lambda x: x['date'] if x['date'] else '')
         
         return jsonify({
             'status': 'success',
-            'data': df.to_dict(orient='records'),
-            'plots': plots
+            'data': all_data
         })
     except Exception as e:
         return jsonify({
