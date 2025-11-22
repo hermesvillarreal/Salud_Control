@@ -73,6 +73,13 @@
             const panel = document.createElement('div');
             panel.className = 'panel';
             panel.innerHTML = `
+                <div style="padding: 10px; background: #f0f7f0; margin: 10px 0; border-radius: 8px;">
+                    <label style="font-size: 0.9rem; font-weight: bold; color: #2e7d32;">✨ Autocompletar con IA</label>
+                    <div style="display: flex; gap: 8px; margin-top: 5px;">
+                        <input type="text" id="desc-${meal.id}" placeholder="Ej: 2 huevos revueltos y una manzana" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button type="button" onclick="analyzeFood('${meal.id}')" style="background: #2e7d32; color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer;">Analizar</button>
+                    </div>
+                </div>
                 <div class="row" style="padding: 15px 0;">
                     <div class="col">
                         <label style="font-size:0.9rem">Proteínas (g)</label>
@@ -105,6 +112,9 @@
                 if (panel.style.maxHeight) {
                     panel.style.maxHeight = null;
                 } else {
+                    // Recalculate scrollHeight to account for dynamic content
+                    // We use a timeout to allow the DOM to update if needed, though usually immediate is fine.
+                    // Setting it to a large value is safer for dynamic content or just re-measure.
                     panel.style.maxHeight = panel.scrollHeight + "px";
                 }
             });
@@ -112,6 +122,45 @@
             mealsContainer.appendChild(btn);
             mealsContainer.appendChild(panel);
         });
+
+        async function analyzeFood(mealId) {
+            const descInput = document.getElementById(`desc-${mealId}`);
+            const description = descInput.value;
+
+            if (!description) {
+                alert('Por favor describe la comida primero');
+                return;
+            }
+
+            const btn = descInput.nextElementSibling;
+            const originalText = btn.textContent;
+            btn.textContent = '⏳...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze_food', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else {
+                    document.querySelector(`input[name="meals[${mealId}][protein]"]`).value = data.protein || 0;
+                    document.querySelector(`input[name="meals[${mealId}][carbs]"]`).value = data.carbs || 0;
+                    document.querySelector(`input[name="meals[${mealId}][fat]"]`).value = data.fat || 0;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error al conectar con el servicio de IA');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
 
         document.getElementById('foodForm').addEventListener('submit', async function (e) {
             e.preventDefault();

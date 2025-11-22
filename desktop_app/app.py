@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 import os
-import openai
+import google.generativeai as genai
 import json
 from database import SessionLocal, engine
 from models import Base, User, HealthRecord, WeightRecord, BloodPressureRecord, GlucoseRecord, FoodRecord
@@ -35,10 +35,10 @@ def load_user(user_id):
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI if API key is available
-openai_api_key = os.getenv("OPENAI_API_KEY")
-if openai_api_key:
-    openai.api_key = openai_api_key
+# Initialize Gemini if API key is available
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
 
 @app.route('/')
 @login_required
@@ -236,6 +236,35 @@ def add_food():
             return jsonify({"status": "error", "message": str(e)}), 400
         finally:
             db.close()
+
+@app.route('/analyze_food', methods=['POST'])
+@login_required
+def analyze_food():
+    if not gemini_api_key:
+        return jsonify({"error": "Gemini API key not configured"}), 503
+        
+    try:
+        data = request.json
+        description = data.get('description')
+        
+        if not description:
+            return jsonify({"error": "No description provided"}), 400
+            
+        model = genai.GenerativeModel('gemini-flash-latest', generation_config={"response_mime_type": "application/json"})
+        prompt = f"""
+        Analyze the following food description and estimate the macronutrients.
+        Return a JSON object with the following keys: "protein" (int), "carbs" (int), "fat" (int), "calories" (int).
+        
+        Description: {description}
+        """
+        
+        response = model.generate_content(prompt)
+        result = json.loads(response.text)
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"Error analyzing food: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/generate_plots")
 @login_required
@@ -482,27 +511,23 @@ def analyze_health_data():
         }
         
         # AI Analysis if enabled
-        if openai_api_key:
+        if gemini_api_key:
             try:
                 analysis_prompt = f"""
-                Analyze the following health metrics:
-                Weight: Mean {stats['weight']['mean']:.1f}kg, Trend: {stats['weight']['trend']}
-                Blood Pressure: Mean {stats['blood_pressure']['sys_mean']:.0f}/{stats['blood_pressure']['dia_mean']:.0f}
-                Glucose: Mean {stats['glucose']['mean']:.1f}, Standard Deviation {stats['glucose']['std']:.1f}
+                Analiza las siguientes metricas de salud:
+                Peso: Media {stats['weight']['mean']:.1f}kg, Tendencia: {stats['weight']['trend']}
+                Presión arterial: Media {stats['blood_pressure']['sys_mean']:.0f}/{stats['blood_pressure']['dia_mean']:.0f}
+                Glucosa: Media {stats['glucose']['mean']:.1f}, Desviación estándar {stats['glucose']['std']:.1f}
                 
-                Provide a brief health analysis and recommendations.
+                Provee un breve análisis de salud y recomendaciones.
+                No presentes cuadros o tablas, realiza el análisis en un solo párrafo.
                 """
                 
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a health analysis assistant."},
-                        {"role": "user", "content": analysis_prompt}
-                    ]
-                )
-                analysis_result['ai_analysis'] = response.choices[0].message.content
+                model = genai.GenerativeModel('gemini-flash-latest')
+                response = model.generate_content(analysis_prompt)
+                analysis_result['ai_analysis'] = response.text
             except Exception as e:
-                analysis_result['ai_analysis'] = f"AI analysis unavailable: {str(e)}"
+                analysis_result['ai_analysis'] = f"Análisis AI no disponible: {str(e)}"
         
         return jsonify(analysis_result)
     except Exception as e:
