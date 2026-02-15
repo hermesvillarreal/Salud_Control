@@ -2,7 +2,12 @@ import React from 'react';
 import { Plus, Utensils, Scale, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const DashboardHeader: React.FC = () => {
+interface DashboardHeaderProps {
+    onRegisterPeso: () => void;
+    onRegisterPresion: () => void;
+}
+
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onRegisterPresion }) => {
     const navigate = useNavigate();
 
     return (
@@ -12,7 +17,10 @@ const DashboardHeader: React.FC = () => {
                 <p className="text-slate-500">Bienvenido de nuevo, Hermes. Aquí tienes un resumen de tu salud hoy.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-                <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm">
+                <button
+                    onClick={onRegisterPeso}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
                     <Scale className="w-4 h-4" />
                     <span>Registrar Peso</span>
                 </button>
@@ -23,7 +31,10 @@ const DashboardHeader: React.FC = () => {
                     <Utensils className="w-4 h-4" />
                     <span>Registrar Comida</span>
                 </button>
-                <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm">
+                <button
+                    onClick={onRegisterPresion}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
                     <Activity className="w-4 h-4" />
                     <span>Presión/Glucosa</span>
                 </button>

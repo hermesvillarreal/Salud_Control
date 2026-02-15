@@ -1,10 +1,12 @@
 # Build stage
 FROM node:22-slim AS build
 WORKDIR /app
-COPY package*.json ./
+COPY package.json ./
 RUN npm install
 COPY . .
-RUN npm run build
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npx vite build
 
 # Production stage
 FROM nginx:alpine

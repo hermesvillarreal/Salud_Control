@@ -7,31 +7,40 @@ services:
       POSTGRES_PASSWORD: salud_password
       POSTGRES_DB: salud_control
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U salud_user -d salud_control" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
     container_name: salud-control-backend
     ports:
-      - "8000:8000"
+      - "8004:8000"
     environment:
       - DATABASE_URL=postgresql://salud_user:salud_password@db:5432/salud_control
       - TELEGRAM_BOT_TOKEN=your_fallback_token_here
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - uploads_data:/app/uploads
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://localhost:8004
     container_name: salud-control-frontend
     ports:
-      - "80:80"
+      - "84:80"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8004
     depends_on:
       - backend
 

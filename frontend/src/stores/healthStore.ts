@@ -34,6 +34,7 @@ interface HealthState {
     setFoodLogs: (logs: FoodRecord[]) => void;
     addFoodLog: (log: FoodRecord) => void;
     fetchFoodLogs: () => Promise<void>;
+    fetchMetrics: () => Promise<void>;
     setLoading: (isLoading: boolean) => void;
     setError: (error: string | null) => void;
 }
@@ -61,6 +62,26 @@ export const useHealthStore = create<HealthState>((set, get) => ({
             set({ foodLogs: response.data, isLoading: false });
         } catch (error: any) {
             set({ error: error.message || 'Error fetching food logs', isLoading: false });
+        }
+    },
+    fetchMetrics: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const [weights, bp, glucose] = await Promise.all([
+                api.get('/health/weight'),
+                api.get('/health/bp'),
+                api.get('/health/glucose')
+            ]);
+
+            const allMetrics: HealthMetric[] = [
+                ...weights.data.map((w: any) => ({ type: 'peso' as const, value: w.weight, unit: 'kg', timestamp: w.date })),
+                ...bp.data.map((b: any) => ({ type: 'presion' as const, value: b.systolic, unit: 'mmHg', timestamp: b.date })),
+                ...glucose.data.map((g: any) => ({ type: 'glucosa' as const, value: g.glucose_level, unit: 'mg/dL', timestamp: g.date }))
+            ];
+
+            set({ metrics: allMetrics, isLoading: false, lastUpdate: new Date().toISOString() });
+        } catch (error: any) {
+            set({ error: error.message || 'Error fetching metrics', isLoading: false });
         }
     },
     setLoading: (isLoading) => set({ isLoading }),
