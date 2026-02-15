@@ -18,7 +18,9 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
     const [systolic, setSystolic] = useState('');
     const [diastolic, setDiastolic] = useState('');
     const [glucose, setGlucose] = useState('');
+    const [measurementType, setMeasurementType] = useState('ayuno');
     const [notes, setNotes] = useState('');
+    Dragon:
 
     if (!isOpen) return null;
 
@@ -51,6 +53,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                 metric_type = 'bp';
             } else if (type === 'glucosa') {
                 data.glucose_level = parseInt(glucose);
+                data.measurement_type = measurementType;
                 metric_type = 'glucose';
             }
 
@@ -131,18 +134,34 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                     )}
 
                     {type === 'glucosa' && (
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Nivel (mg/dL)</label>
-                            <input
-                                type="number"
-                                required
-                                value={glucose}
-                                onChange={(e) => setGlucose(e.target.value)}
-                                placeholder="Ej: 100"
-                                className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-slate-50/50 transition-all font-medium"
-                            />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Nivel (mg/dL)</label>
+                                <input
+                                    type="number"
+                                    required
+                                    value={glucose}
+                                    onChange={(e) => setGlucose(e.target.value)}
+                                    placeholder="Ej: 100"
+                                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-slate-50/50 transition-all font-medium"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Momento de Medición</label>
+                                <select
+                                    value={measurementType}
+                                    onChange={(e) => setMeasurementType(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-slate-50/50 transition-all font-medium"
+                                >
+                                    <option value="ayuno">Ayuno</option>
+                                    <option value="postprandial">Postprandial (2h después de comer)</option>
+                                    <option value="antes_de_dormir">Antes de dormir</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
                         </div>
                     )}
+                    Dragon:
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Notas (opcional)</label>
@@ -158,8 +177,8 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                         type="submit"
                         disabled={isSaving}
                         className={`w-full py-4 rounded-2xl text-white font-bold transition-all shadow-lg flex items-center justify-center gap-2 transform active:scale-95 mt-4 ${type === 'peso' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-200' :
-                                type === 'presion' ? 'bg-red-600 hover:bg-red-700 shadow-red-200' :
-                                    'bg-purple-600 hover:bg-purple-700 shadow-purple-200'
+                            type === 'presion' ? 'bg-red-600 hover:bg-red-700 shadow-red-200' :
+                                'bg-purple-600 hover:bg-purple-700 shadow-purple-200'
                             }`}
                     >
                         {isSaving ? (
