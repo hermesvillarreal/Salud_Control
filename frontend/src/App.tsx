@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
+import FoodLog from './pages/FoodLog';
 
 function App() {
     return (
@@ -7,6 +8,9 @@ function App() {
             <Routes>
                 {/* Dashboard principal */}
                 <Route path="/dashboard" element={<Dashboard />} />
+
+                {/* Registro de comida */}
+                <Route path="/food-log" element={<FoodLog />} />
 
                 {/* Redirección por defecto */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
