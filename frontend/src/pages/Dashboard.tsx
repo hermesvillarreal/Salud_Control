@@ -60,6 +60,8 @@ const Dashboard: React.FC = () => {
         { name: 'Grasas', value: todaysFood.reduce((acc, f) => acc + (f.fat || 0), 0), color: '#f59e0b' },
     ];
 
+    const totalCalories = todaysFood.reduce((acc, f) => acc + (f.calories || 0), 0);
+
     const latestWeight = metrics.find(m => m.type === 'peso')?.value || 0;
     const latestBP = metrics.find(m => m.type === 'presion')?.value || '0/0';
     const latestGlucose = metrics.find(m => m.type === 'glucosa')?.value || 0;
@@ -109,7 +111,7 @@ const Dashboard: React.FC = () => {
                     <WeightChart data={weightData} />
                     <PressureChart data={pressureData} />
                     <GlucoseChart data={glucoseData} />
-                    <NutrientsChart data={nutrientsData} />
+                    <NutrientsChart data={nutrientsData} totalCalories={totalCalories} />
                 </div>
             </div>
 

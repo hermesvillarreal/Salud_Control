@@ -161,7 +161,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                             </div>
                         </div>
                     )}
-                    Dragon:
+                    Comentario:
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Notas (opcional)</label>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus, Utensils, Scale, Activity, Droplets } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 
 interface DashboardHeaderProps {
     onRegisterPeso: () => void;
@@ -10,12 +11,27 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onRegisterPresion, onRegisterGlucosa }) => {
     const navigate = useNavigate();
+    const logout = useAuthStore((state) => state.logout);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-                <h1 className="text-3xl font-bold text-slate-900">Panel de Control</h1>
-                <p className="text-slate-500">Bienvenido de nuevo, Hermes. Aquí tienes un resumen de tu salud hoy.</p>
+            <div className="flex items-center justify-between w-full md:w-auto">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900">Panel de Control</h1>
+                    <p className="text-slate-500">Bienvenido de nuevo. Aquí tienes un resumen de tu salud hoy.</p>
+                </div>
+                <button
+                    onClick={handleLogout}
+                    className="md:hidden p-2 text-slate-400 hover:text-red-600 transition-colors"
+                    title="Cerrar Sesión"
+                >
+                    <LogOut className="w-6 h-6" />
+                </button>
             </div>
             <div className="flex flex-wrap gap-2">
                 <button
@@ -45,6 +61,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onReg
                 >
                     <Droplets className="w-4 h-4" />
                     <span>Glucosa</span>
+                </button>
+                <button
+                    onClick={handleLogout}
+                    className="hidden md:flex items-center gap-2 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 px-4 py-2 rounded-xl font-medium transition-colors border border-slate-200"
+                >
+                    <LogOut className="w-4 h-4" />
+                    <span>Salir</span>
                 </button>
             </div>
         </div>
