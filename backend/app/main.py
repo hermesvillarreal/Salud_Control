@@ -2,12 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
+from app.endpoints import router as api_router
 
 app = FastAPI(title="Salud Control API", version="0.1.0")
 
 @app.on_event("startup")
 def on_startup():
     init_db()
+
+app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
