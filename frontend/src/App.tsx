@@ -2,24 +2,27 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
 import ClinicalDocs from './pages/ClinicalDocs';
+import Login from './pages/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
     return (
         <Router>
             <Routes>
-                {/* Dashboard principal */}
-                <Route path="/dashboard" element={<Dashboard />} />
+                {/* Ruta de autenticación */}
+                <Route path="/login" element={<Login />} />
 
-                {/* Registro de comida */}
-                <Route path="/food-log" element={<FoodLog />} />
-
-                {/* Documentos clínicos */}
-                <Route path="/documents" element={<ClinicalDocs />} />
+                {/* Rutas Protegidas */}
+                <Route element={<ProtectedRoute />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/food-log" element={<FoodLog />} />
+                    <Route path="/documents" element={<ClinicalDocs />} />
+                </Route>
 
                 {/* Redirección por defecto */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-                {/* Fallback para 404 - por ahora redirige a dashboard */}
+                {/* Fallback para 404 - redirige a dashboard */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
         </Router>
