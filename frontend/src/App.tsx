@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
+import ClinicalDocs from './pages/ClinicalDocs';
 
 function App() {
     return (
@@ -11,6 +12,9 @@ function App() {
 
                 {/* Registro de comida */}
                 <Route path="/food-log" element={<FoodLog />} />
+
+                {/* Documentos clínicos */}
+                <Route path="/documents" element={<ClinicalDocs />} />
 
                 {/* Redirección por defecto */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />

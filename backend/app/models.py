@@ -97,6 +97,7 @@ class ExerciseRecord(SQLModel, table=True):
 class DocumentType(str, Enum):
     RECETA = "receta"
     LABORATORIO = "laboratorio"
+    ESTUDIO = "estudio"
     IMAGEN = "imagen"
 
 class ClinicalDocument(SQLModel, table=True):

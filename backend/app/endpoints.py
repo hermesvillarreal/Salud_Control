@@ -144,6 +144,7 @@ if not os.path.exists(UPLOAD_DIR):
 async def upload_document(
     title: str = Form(...),
     doc_type: str = Form(...),
+    notes: Optional[str] = Form(None),
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
@@ -156,7 +157,8 @@ async def upload_document(
         user_id=user.id,
         title=title,
         document_type=doc_type,
-        file_path=file_path
+        file_path=file_path,
+        notes=notes
     )
     session.add(doc)
     session.commit()
