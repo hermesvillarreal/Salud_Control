@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, LogIn, HeartPulse } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../stores/authStore';
@@ -116,7 +116,7 @@ const Login: React.FC = () => {
 
                     <div className="mt-8 pt-8 border-t border-slate-50 text-center">
                         <p className="text-slate-400 text-sm">
-                            ¿No tienes una cuenta? <span className="text-blue-600 font-bold cursor-pointer hover:underline">Regístrate gratis</span>
+                            ¿No tienes una cuenta? <Link to="/register" className="text-blue-600 font-bold hover:underline">Regístrate gratis</Link>
                         </p>
                     </div>
                 </div>

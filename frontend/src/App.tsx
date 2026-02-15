@@ -3,14 +3,16 @@ import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
 import ClinicalDocs from './pages/ClinicalDocs';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
     return (
         <Router>
             <Routes>
-                {/* Ruta de autenticación */}
+                {/* Rutas de autenticación */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
                 {/* Rutas Protegidas */}
                 <Route element={<ProtectedRoute />}>
