@@ -47,6 +47,15 @@ def login(user_data: dict, session: Session = Depends(get_session)):
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.get("/auth/telegram-token")
+def get_telegram_token(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    import secrets
+    token = secrets.token_urlsafe(16)
+    user.telegram_auth_token = token
+    session.add(user)
+    session.commit()
+    return {"token": token}
+
 # --- HEALTH METRICS CRUD ---
 
 # Helper mapping for generic CRUD to avoid code repetition in this implementation

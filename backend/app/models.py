@@ -16,6 +16,8 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     password_hash: str
+    telegram_chat_id: Optional[int] = Field(default=None, index=True)
+    telegram_auth_token: Optional[str] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Relationships (Optional but good practice)
