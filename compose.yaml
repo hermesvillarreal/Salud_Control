@@ -35,12 +35,12 @@ services:
     build:
       context: ./frontend
       args:
-        - VITE_API_URL=http://localhost:8004
+        - VITE_API_URL=/api
     container_name: salud-control-frontend
     ports:
       - "84:80"
     environment:
-      - VITE_API_URL=http://localhost:8004
+      - VITE_API_URL=/api
     depends_on:
       - backend
 
