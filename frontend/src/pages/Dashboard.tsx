@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
     // Modal states
     const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
     const [isPressureModalOpen, setIsPressureModalOpen] = useState(false);
-    const [modalType, setModalType] = useState<'peso' | 'presion' | 'glucosa'>('peso');
+    const [isGlucoseModalOpen, setIsGlucoseModalOpen] = useState(false);
 
     useEffect(() => {
         fetchMetrics();
@@ -23,13 +23,15 @@ const Dashboard: React.FC = () => {
     }, [fetchMetrics, fetchFoodLogs]);
 
     const handleRegisterPeso = () => {
-        setModalType('peso');
         setIsWeightModalOpen(true);
     };
 
     const handleRegisterPresion = () => {
-        setModalType('presion');
         setIsPressureModalOpen(true);
+    };
+
+    const handleRegisterGlucosa = () => {
+        setIsGlucoseModalOpen(true);
     };
 
     // Derived data for charts (fallback to mock if empty for demonstration, but aiming for real)
@@ -68,6 +70,7 @@ const Dashboard: React.FC = () => {
                 <DashboardHeader
                     onRegisterPeso={handleRegisterPeso}
                     onRegisterPresion={handleRegisterPresion}
+                    onRegisterGlucosa={handleRegisterGlucosa}
                 />
 
                 {/* Tarjetas KPI */}
@@ -119,6 +122,11 @@ const Dashboard: React.FC = () => {
                 isOpen={isPressureModalOpen}
                 onClose={() => setIsPressureModalOpen(false)}
                 type="presion"
+            />
+            <HealthModal
+                isOpen={isGlucoseModalOpen}
+                onClose={() => setIsGlucoseModalOpen(false)}
+                type="glucosa"
             />
         </div>
     );

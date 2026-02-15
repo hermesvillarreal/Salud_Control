@@ -19,14 +19,9 @@ const Login: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            const formData = new URLSearchParams();
-            formData.append('username', email); // backend espera username (email en nuestro caso)
-            formData.append('password', password);
-
-            const response = await api.post('/auth/token', formData, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
+            const response = await api.post('/auth/login', {
+                username: email, // enviamos el valor del campo (que puede ser email o usuario)
+                password: password
             });
 
             const { access_token, user } = response.data;
@@ -65,18 +60,18 @@ const Login: React.FC = () => {
                         )}
 
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico</label>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">Usuario o Correo Electrónico</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                 </div>
                                 <input
-                                    type="email"
+                                    type="text"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="block w-full pl-11 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
-                                    placeholder="correo@ejemplo.com"
+                                    placeholder="usuario o correo@ejemplo.com"
                                 />
                             </div>
                         </div>

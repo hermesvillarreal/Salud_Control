@@ -42,14 +42,17 @@ def register(user_data: UserCreate, session: Session = Depends(get_session)):
 
 @router.post("/auth/login")
 def login(user_data: dict, session: Session = Depends(get_session)):
-    # In endpoints.py, login still takes dict for now, but we'll use .get() safely
-    username = user_data.get("username")
+    login_id = user_data.get("username") # Frontend sends login_id as 'username'
     password = user_data.get("password")
     
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Username and password required")
+    if not login_id or not password:
+        raise HTTPException(status_code=400, detail="Username/Email and password required")
 
-    user = session.exec(select(User).where(User.username == username)).first()
+    # Search by username OR email
+    user = session.exec(
+        select(User).where((User.username == login_id) | (User.email == login_id))
+    ).first()
+    
     if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     

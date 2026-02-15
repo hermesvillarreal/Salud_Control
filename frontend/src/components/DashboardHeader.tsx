@@ -1,13 +1,14 @@
 import React from 'react';
-import { Plus, Utensils, Scale, Activity } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface DashboardHeaderProps {
     onRegisterPeso: () => void;
     onRegisterPresion: () => void;
+    onRegisterGlucosa: () => void;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onRegisterPresion }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onRegisterPresion, onRegisterGlucosa }) => {
     const navigate = useNavigate();
 
     return (
@@ -33,10 +34,17 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onReg
                 </button>
                 <button
                     onClick={onRegisterPresion}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
                 >
                     <Activity className="w-4 h-4" />
-                    <span>Presión/Glucosa</span>
+                    <span>Presión Arterial</span>
+                </button>
+                <button
+                    onClick={onRegisterGlucosa}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
+                    <Droplets className="w-4 h-4" />
+                    <span>Glucosa</span>
                 </button>
             </div>
         </div>
