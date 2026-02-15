@@ -13,6 +13,9 @@ class UserBase(SQLModel):
     full_name: Optional[str] = None
     role: UserRole = Field(default=UserRole.USER)
 
+class UserCreate(UserBase):
+    password: str
+
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     password_hash: str

@@ -25,7 +25,7 @@ const Register: React.FC = () => {
                 email: email,
                 username: username,
                 password: password,
-                role: 'user'
+                role: 'USER'
             });
 
             setSuccess(true);
@@ -34,7 +34,11 @@ const Register: React.FC = () => {
             }, 2000);
         } catch (error: any) {
             console.error('Registration error:', error);
-            setError(error.response?.data?.detail || 'Error al crear la cuenta. Inténtalo de nuevo.');
+            const detail = error.response?.data?.detail;
+            const message = Array.isArray(detail)
+                ? detail.map((d: any) => d.msg).join(', ')
+                : detail || 'Error al crear la cuenta. Inténtalo de nuevo.';
+            setError(message);
         } finally {
             setIsSubmitting(false);
         }

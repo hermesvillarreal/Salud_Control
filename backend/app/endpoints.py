@@ -7,7 +7,7 @@ from datetime import datetime
 
 from app.database import get_session
 from app.models import (
-    User, WeightRecord, BloodPressureRecord, GlucoseRecord, 
+    User, UserCreate, WeightRecord, BloodPressureRecord, GlucoseRecord, 
     FoodRecord, ExerciseRecord, ClinicalDocument, UserRole, MealType
 )
 from app.auth.hash_utils import get_password_hash, verify_password
@@ -20,18 +20,20 @@ router = APIRouter()
 # --- AUTH ENDPOINTS ---
 
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
-def register(user_data: dict, session: Session = Depends(get_session)):
-    # Check if user exists
-    existing_user = session.exec(select(User).where(User.username == user_data["username"])).first()
+def register(user_data: UserCreate, session: Session = Depends(get_session)):
+    # Check if user exists (username or email)
+    existing_user = session.exec(
+        select(User).where((User.username == user_data.username) | (User.email == user_data.email))
+    ).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail="Username or Email already registered")
     
     new_user = User(
-        username=user_data["username"],
-        email=user_data["email"],
-        full_name=user_data.get("full_name"),
-        password_hash=get_password_hash(user_data["password"]),
-        role=user_data.get("role", UserRole.USER)
+        username=user_data.username,
+        email=user_data.email,
+        full_name=user_data.full_name,
+        password_hash=get_password_hash(user_data.password),
+        role=user_data.role
     )
     session.add(new_user)
     session.commit()
@@ -40,12 +42,28 @@ def register(user_data: dict, session: Session = Depends(get_session)):
 
 @router.post("/auth/login")
 def login(user_data: dict, session: Session = Depends(get_session)):
-    user = session.exec(select(User).where(User.username == user_data["username"])).first()
-    if not user or not verify_password(user_data["password"], user.password_hash):
+    # In endpoints.py, login still takes dict for now, but we'll use .get() safely
+    username = user_data.get("username")
+    password = user_data.get("password")
+    
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password required")
+
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token(data={"sub": user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "name": user.full_name or user.username
+        }
+    }
 
 @router.get("/auth/telegram-token")
 def get_telegram_token(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
