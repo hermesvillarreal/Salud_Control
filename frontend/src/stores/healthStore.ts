@@ -49,6 +49,8 @@ interface HealthState {
     addExerciseLog: (log: ExerciseRecord) => void;
     fetchExerciseLogs: () => Promise<void>;
     fetchMetrics: () => Promise<void>;
+    updateFoodLog: (id: number, updatedLog: FoodRecord) => void;
+    updateExerciseLog: (id: number, updatedLog: ExerciseRecord) => void;
     setLoading: (isLoading: boolean) => void;
     setError: (error: string | null) => void;
 }
@@ -113,6 +115,14 @@ export const useHealthStore = create<HealthState>((set) => ({
             set({ error: error.message || 'Error fetching metrics', isLoading: false });
         }
     },
+    updateFoodLog: (id: number, updatedLog: FoodRecord) => set((state: HealthState) => ({
+        foodLogs: state.foodLogs.map(log => log.id === id ? updatedLog : log),
+        lastUpdate: new Date().toISOString()
+    })),
+    updateExerciseLog: (id: number, updatedLog: ExerciseRecord) => set((state: HealthState) => ({
+        exerciseLogs: state.exerciseLogs.map(log => log.id === id ? updatedLog : log),
+        lastUpdate: new Date().toISOString()
+    })),
     setLoading: (isLoading: boolean) => set({ isLoading }),
     setError: (error: string | null) => set({ error }),
 }));

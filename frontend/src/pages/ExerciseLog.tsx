@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, ImageIcon, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, ExerciseRecord } from '../stores/healthStore';
 
 const ExerciseLog: React.FC = () => {
     const navigate = useNavigate();
-    const { exerciseLogs, addExerciseLog, fetchExerciseLogs, isLoading: storeLoading } = useHealthStore();
+    const { exerciseLogs, addExerciseLog, updateExerciseLog, fetchExerciseLogs, isLoading: storeLoading } = useHealthStore();
 
     // Form state
     const [description, setDescription] = useState('');
@@ -22,6 +22,14 @@ const ExerciseLog: React.FC = () => {
         fetchExerciseLogs();
     }, [fetchExerciseLogs]);
 
+    // Helper to get local date in ISO format (YYYY-MM-DDTHH:mm)
+    const getLocalISOString = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localDate = new Date(now.getTime() - offset);
+        return localDate.toISOString().slice(0, 16);
+    };
+
     const handleAnalyze = async () => {
         if (!description.trim()) return;
 
@@ -36,7 +44,7 @@ const ExerciseLog: React.FC = () => {
                 duration_minutes: response.data.duration_minutes,
                 intensity: response.data.intensity,
                 calories_burned: response.data.calories_burned,
-                fecha_hora: new Date().toISOString().slice(0, 16)
+                fecha_hora: getLocalISOString()
             });
             setEditMode(false);
         } catch (error) {
@@ -66,7 +74,7 @@ const ExerciseLog: React.FC = () => {
                 duration_minutes: response.data.duration_minutes,
                 intensity: response.data.intensity,
                 calories_burned: response.data.calories_burned,
-                fecha_hora: new Date().toISOString().slice(0, 16)
+                fecha_hora: getLocalISOString()
             });
             setEditMode(false);
         } catch (error) {
@@ -82,8 +90,15 @@ const ExerciseLog: React.FC = () => {
 
         setIsSaving(true);
         try {
-            const response = await api.post('/exercise', estimatedExercise);
-            addExerciseLog(response.data);
+            if (estimatedExercise.id) {
+                // Update existing record
+                const response = await api.put(`/exercise/${estimatedExercise.id}`, estimatedExercise);
+                updateExerciseLog(estimatedExercise.id, response.data);
+            } else {
+                // Create new record
+                const response = await api.post('/exercise', estimatedExercise);
+                addExerciseLog(response.data);
+            }
 
             // Reset form
             setDescription('');
@@ -95,6 +110,12 @@ const ExerciseLog: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleEdit = (log: ExerciseRecord) => {
+        setEstimatedExercise(log);
+        setEditMode(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleEditChange = (field: keyof ExerciseRecord, value: any) => {
@@ -303,14 +324,27 @@ const ExerciseLog: React.FC = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="hidden md:flex gap-4 text-right">
+                                        <div className="hidden md:flex gap-4 text-right items-center">
                                             <div className="text-xs">
                                                 <p className="text-slate-400">Quema</p>
                                                 <p className="font-bold text-slate-900">{log.calories_burned} kcal</p>
                                             </div>
+                                            <button
+                                                onClick={() => handleEdit(log)}
+                                                className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                title="Editar registro"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <div className="md:hidden text-right">
+                                        <div className="md:hidden text-right flex flex-col items-end gap-2">
                                             <p className="font-bold text-slate-900 text-sm">{log.calories_burned} kcal</p>
+                                            <button
+                                                onClick={() => handleEdit(log)}
+                                                className="p-1 text-slate-400 hover:text-orange-600"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))

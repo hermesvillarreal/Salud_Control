@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Utensils, PieChart } from 'lucide-react';
+import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Utensils, PieChart, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, FoodRecord, MealType } from '../stores/healthStore';
 
 const FoodLog: React.FC = () => {
     const navigate = useNavigate();
-    const { foodLogs, addFoodLog, fetchFoodLogs, isLoading: storeLoading } = useHealthStore();
+    const { foodLogs, addFoodLog, updateFoodLog, fetchFoodLogs, isLoading: storeLoading } = useHealthStore();
 
     // Form state
     const [description, setDescription] = useState('');
@@ -20,6 +20,14 @@ const FoodLog: React.FC = () => {
     useEffect(() => {
         fetchFoodLogs();
     }, [fetchFoodLogs]);
+
+    // Helper to get local date in ISO format (YYYY-MM-DDTHH:mm)
+    const getLocalISOString = () => {
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const localDate = new Date(now.getTime() - offset);
+        return localDate.toISOString().slice(0, 16);
+    };
 
     const handleAnalyze = async () => {
         if (!description.trim()) return;
@@ -38,7 +46,7 @@ const FoodLog: React.FC = () => {
                 carbs: response.data.carbs,
                 fat: response.data.fat,
                 meal_type: (response.data.meal_type || 'almuerzo').toLowerCase(),
-                fecha_hora: new Date().toISOString().slice(0, 16)
+                fecha_hora: getLocalISOString()
             });
             setEditMode(false);
         } catch (error) {
@@ -54,8 +62,15 @@ const FoodLog: React.FC = () => {
 
         setIsSaving(true);
         try {
-            const response = await api.post('/food/log', estimatedFood);
-            addFoodLog(response.data);
+            if (estimatedFood.id) {
+                // Update existing record
+                const response = await api.put(`/food/${estimatedFood.id}`, estimatedFood);
+                updateFoodLog(estimatedFood.id, response.data);
+            } else {
+                // Create new record
+                const response = await api.post('/food/log', estimatedFood);
+                addFoodLog(response.data);
+            }
 
             // Reset form
             setDescription('');
@@ -69,6 +84,13 @@ const FoodLog: React.FC = () => {
             // Artificial delay for UX feel, though not strictly needed here
             setTimeout(() => setIsSaving(false), 500);
         }
+    };
+
+    const handleEdit = (log: FoodRecord) => {
+        setEstimatedFood(log);
+        setEditMode(true);
+        // Scroll to top to see the form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleEditChange = (field: keyof FoodRecord, value: any) => {
@@ -265,7 +287,7 @@ const FoodLog: React.FC = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="hidden md:flex gap-4 text-right">
+                                        <div className="hidden md:flex gap-4 text-right items-center">
                                             <div className="text-xs">
                                                 <p className="text-slate-400">Calorías</p>
                                                 <p className="font-bold text-slate-900">{log.calories} kcal</p>
@@ -274,9 +296,22 @@ const FoodLog: React.FC = () => {
                                                 <p className="text-slate-400">Macros (P/C/G)</p>
                                                 <p className="font-bold text-slate-900">{log.protein}g / {log.carbs}g / {log.fat}g</p>
                                             </div>
+                                            <button
+                                                onClick={() => handleEdit(log)}
+                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Editar registro"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                        <div className="md:hidden text-right">
+                                        <div className="md:hidden text-right flex flex-col items-end gap-2">
                                             <p className="font-bold text-slate-900 text-sm">{log.calories} kcal</p>
+                                            <button
+                                                onClick={() => handleEdit(log)}
+                                                className="p-1 text-slate-400 hover:text-blue-600"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 ))

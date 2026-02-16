@@ -158,7 +158,29 @@ def log_food(
 
 @router.get("/food", response_model=List[FoodRecord])
 def get_food_logs(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    return session.exec(select(FoodRecord).where(FoodRecord.user_id == user.id)).all()
+    return session.exec(select(FoodRecord).where(FoodRecord.user_id == user.id).order_by(FoodRecord.fecha_hora.desc())).all()
+
+@router.put("/food/{id}", response_model=FoodRecord)
+def update_food_log(
+    id: int,
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    record = session.get(FoodRecord, id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Food record not found")
+    if record.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this record")
+    
+    for key, value in data.items():
+        if key != "id" and key != "user_id": # Prevent changing ID or ownership
+             setattr(record, key, value)
+
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+    return record
 
 @router.post("/exercise")
 def log_exercise(
@@ -190,7 +212,29 @@ async def analyze_exercise_img(
 
 @router.get("/exercise", response_model=List[ExerciseRecord])
 def get_exercise_logs(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    return session.exec(select(ExerciseRecord).where(ExerciseRecord.user_id == user.id)).all()
+    return session.exec(select(ExerciseRecord).where(ExerciseRecord.user_id == user.id).order_by(ExerciseRecord.fecha_hora.desc())).all()
+
+@router.put("/exercise/{id}", response_model=ExerciseRecord)
+def update_exercise_log(
+    id: int,
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    record = session.get(ExerciseRecord, id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Exercise record not found")
+    if record.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this record")
+    
+    for key, value in data.items():
+        if key != "id" and key != "user_id": # Prevent changing ID or ownership
+             setattr(record, key, value)
+
+    session.add(record)
+    session.commit()
+    session.refresh(record)
+    return record
 
 # --- CLINICAL DOCUMENTS ---
 
