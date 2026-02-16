@@ -197,7 +197,8 @@ async def upload_document(
         title=title,
         document_type=doc_type,
         file_path=file_path,
-        notes=notes
+        notes=notes,
+        fecha_hora=datetime.now()
     )
     session.add(doc)
     session.commit()

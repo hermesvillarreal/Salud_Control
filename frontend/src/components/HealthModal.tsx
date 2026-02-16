@@ -20,6 +20,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
     const [glucose, setGlucose] = useState('');
     const [measurementType, setMeasurementType] = useState('ayuno');
     const [notes, setNotes] = useState('');
+    const [fechaHora, setFechaHora] = useState(new Date().toISOString().slice(0, 16));
     Dragon:
 
     if (!isOpen) return null;
@@ -41,7 +42,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
         setIsSaving(true);
 
         try {
-            let data: any = { notes, date: new Date().toISOString() };
+            let data: any = { notes, fecha_hora: new Date(fechaHora).toISOString() };
             let metric_type = '';
 
             if (type === 'peso') {
@@ -63,7 +64,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                 type,
                 value: type === 'presion' ? data.systolic : (type === 'peso' ? data.weight : data.glucose_level),
                 unit: type === 'peso' ? 'kg' : (type === 'presion' ? 'mmHg' : 'mg/dL'),
-                timestamp: data.date
+                timestamp: data.fecha_hora
             });
 
             onClose();
@@ -161,7 +162,17 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                             </div>
                         </div>
                     )}
-                    Comentario:
+
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Fecha y Hora</label>
+                        <input
+                            type="datetime-local"
+                            required
+                            value={fechaHora}
+                            onChange={(e) => setFechaHora(e.target.value)}
+                            className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-slate-500 focus:border-transparent outline-none bg-slate-50/50 transition-all font-medium"
+                        />
+                    </div>
 
                     <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">Notas (opcional)</label>

@@ -28,7 +28,9 @@ async def analyze_food_text(description: str) -> Dict[str, Any]:
     - protein (float, en gramos)
     - carbs (float, en gramos)
     - fat (float, en gramos)
+    - meal_type (string, debe ser uno de: desayuno, merienda_manana, almuerzo, merienda_tarde, cena, merienda_postcena)
 
+    Sugerencia para meal_type basado en la hora actual: elige el más apropiado.
     Si no puedes determinar los valores, intenta dar una estimación promedio razonable.
     Comida: {description}
     """
@@ -72,6 +74,7 @@ async def analyze_food_image(image_bytes: bytes, mime_type: str, description: st
     - carbs (float, en gramos)
     - fat (float, en gramos)
     - food_name (string, nombre del plato identificado)
+    - meal_type (string, debe ser uno de: desayuno, merienda_manana, almuerzo, merienda_tarde, cena, merienda_postcena)
 
     Si no puedes determinar los valores o no hay comida en la imagen, responde con un objeto JSON con error.
     """

@@ -37,7 +37,8 @@ const FoodLog: React.FC = () => {
                 protein: response.data.protein,
                 carbs: response.data.carbs,
                 fat: response.data.fat,
-                meal_type: response.data.meal_type || 'almuerzo'
+                meal_type: (response.data.meal_type || 'almuerzo').toLowerCase(),
+                fecha_hora: new Date().toISOString().slice(0, 16)
             });
             setEditMode(false);
         } catch (error) {
@@ -132,8 +133,30 @@ const FoodLog: React.FC = () => {
                                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
                                     <div className="flex justify-between items-start mb-6">
                                         <div>
-                                            <h3 className="font-bold text-slate-900 text-lg">{estimatedFood.description}</h3>
-                                            <p className="text-slate-500 capitalize">{estimatedFood.meal_type}</p>
+                                            {editMode ? (
+                                                <div className="mb-2">
+                                                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Tipo de Comida</label>
+                                                    <select
+                                                        value={estimatedFood.meal_type?.toLowerCase()}
+                                                        onChange={(e) => handleEditChange('meal_type', e.target.value.toLowerCase())}
+                                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm"
+                                                    >
+                                                        <option value="desayuno">Desayuno</option>
+                                                        <option value="merienda_manana">Merienda Mañana</option>
+                                                        <option value="almuerzo">Almuerzo</option>
+                                                        <option value="merienda_tarde">Merienda Tarde</option>
+                                                        <option value="cena">Cena</option>
+                                                        <option value="merienda_postcena">Merienda Postcena</option>
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <h3 className="font-bold text-slate-900 text-lg">{estimatedFood.description}</h3>
+                                                    <p className="text-green-600 font-semibold text-sm capitalize">
+                                                        {estimatedFood.meal_type?.replace('_', ' ')}
+                                                    </p>
+                                                </>
+                                            )}
                                         </div>
                                         <button
                                             onClick={() => setEditMode(!editMode)}
@@ -173,6 +196,18 @@ const FoodLog: React.FC = () => {
                                             onChange={(val) => handleEditChange('fat', parseFloat(val))}
                                         />
                                     </div>
+
+                                    {editMode && (
+                                        <div className="mt-4 animate-in fade-in duration-300">
+                                            <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Fecha y Hora del Consumo</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={estimatedFood.fecha_hora ? estimatedFood.fecha_hora.slice(0, 16) : ''}
+                                                onChange={(e) => handleEditChange('fecha_hora', e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all font-medium"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex gap-3">
@@ -225,7 +260,9 @@ const FoodLog: React.FC = () => {
                                             </div>
                                             <div>
                                                 <h4 className="font-bold text-slate-900">{log.description}</h4>
-                                                <p className="text-xs text-slate-500 capitalize">{log.meal_type} • {log.date && new Date(log.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                <p className="text-xs text-slate-500 capitalize">
+                                                    {log.meal_type?.replace('_', ' ')} • {log.fecha_hora && new Date(log.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="hidden md:flex gap-4 text-right">

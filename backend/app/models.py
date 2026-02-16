@@ -21,7 +21,7 @@ class User(UserBase, table=True):
     password_hash: str
     telegram_chat_id: Optional[int] = Field(default=None, index=True)
     telegram_auth_token: Optional[str] = Field(default=None, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.now)
 
     # Relationships (Optional but good practice)
     weight_records: list["WeightRecord"] = Relationship(back_populates="user")
@@ -34,7 +34,7 @@ class User(UserBase, table=True):
 class WeightRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     weight: float
     notes: Optional[str] = None
 
@@ -43,7 +43,7 @@ class WeightRecord(SQLModel, table=True):
 class BloodPressureRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     systolic: int
     diastolic: int
     heart_rate: Optional[int] = None
@@ -54,7 +54,7 @@ class BloodPressureRecord(SQLModel, table=True):
 class GlucoseRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     glucose_level: float
     measurement_type: str  # e.g., ayuno, postprandial
     notes: Optional[str] = None
@@ -63,14 +63,16 @@ class GlucoseRecord(SQLModel, table=True):
 
 class MealType(str, Enum):
     DESAYUNO = "desayuno"
+    MERIENDA_MANANA = "merienda_manana"
     ALMUERZO = "almuerzo"
+    MERIENDA_TARDE = "merienda_tarde"
     CENA = "cena"
-    SNACK = "snack"
+    MERIENDA_POSTCENA = "merienda_postcena"
 
 class FoodRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     meal_type: MealType
     description: str
     calories: Optional[int] = None
@@ -89,7 +91,7 @@ class IntensityType(str, Enum):
 class ExerciseRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     exercise_type: str
     duration_minutes: int
     calories_burned: Optional[int] = None
@@ -106,7 +108,7 @@ class DocumentType(str, Enum):
 class ClinicalDocument(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    date: datetime = Field(default_factory=datetime.utcnow)
+    fecha_hora: datetime = Field(default_factory=datetime.now)
     title: str
     document_type: DocumentType
     file_path: str

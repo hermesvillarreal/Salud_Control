@@ -28,6 +28,27 @@ logging.basicConfig(
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CONFIRM_FOOD = 1
 
+def parse_time(args: list, start_idx: int) -> datetime:
+    """Helper to parse time from command arguments."""
+    now = datetime.now()
+    if len(args) <= start_idx:
+        return now
+    
+    time_str = args[start_idx]
+    try:
+        # Handle formats like HH:MM
+        if ":" in time_str:
+            h, m = map(int, time_str.split(":"))
+            return now.replace(hour=h, minute=m, second=0, microsecond=0)
+        # Handle relative time like -10m (minutes ago)
+        elif time_str.startswith("-") and time_str.endswith("m"):
+            mins = int(time_str[1:-1])
+            from datetime import timedelta
+            return now - timedelta(minutes=mins)
+    except Exception:
+        pass
+    return now
+
 async def get_user_by_chat_id(chat_id: int):
     with Session(engine) as session:
         statement = select(User).where(User.telegram_chat_id == chat_id)
@@ -98,13 +119,14 @@ async def peso(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         val = float(context.args[0])
+        dt = parse_time(context.args, 1)
         with Session(engine) as session:
-            record = WeightRecord(user_id=user.id, weight=val)
+            record = WeightRecord(user_id=user.id, weight=val, fecha_hora=dt)
             session.add(record)
             session.commit()
-            await update.message.reply_text(f"✅ Peso registrado: {val} kg")
+            await update.message.reply_text(f"✅ Peso registrado: {val} kg (Hora: {dt.strftime('%H:%M')})")
     except (IndexError, ValueError):
-        await update.message.reply_text("Uso: /peso <valor>")
+        await update.message.reply_text("Uso: /peso <valor> [hora (ej. 10:30 or -10m)]")
 
 async def presion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
@@ -115,13 +137,14 @@ async def presion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         sis = int(context.args[0])
         dia = int(context.args[1])
+        dt = parse_time(context.args, 2)
         with Session(engine) as session:
-            record = BloodPressureRecord(user_id=user.id, systolic=sis, diastolic=dia)
+            record = BloodPressureRecord(user_id=user.id, systolic=sis, diastolic=dia, fecha_hora=dt)
             session.add(record)
             session.commit()
-            await update.message.reply_text(f"✅ Presión arterial registrada: {sis}/{dia}")
+            await update.message.reply_text(f"✅ Presión arterial registrada: {sis}/{dia} (Hora: {dt.strftime('%H:%M')})")
     except (IndexError, ValueError):
-        await update.message.reply_text("Uso: /presion <sistólica> <diastólica>")
+        await update.message.reply_text("Uso: /presion <sistólica> <diastólica> [hora]")
 
 async def glucosa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
@@ -131,13 +154,14 @@ async def glucosa(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         val = float(context.args[0])
+        dt = parse_time(context.args, 1)
         with Session(engine) as session:
-            record = GlucoseRecord(user_id=user.id, glucose_level=val, measurement_type="ayuno")
+            record = GlucoseRecord(user_id=user.id, glucose_level=val, measurement_type="ayuno", fecha_hora=dt)
             session.add(record)
             session.commit()
-            await update.message.reply_text(f"✅ Glucosa registrada: {val} mg/dL")
+            await update.message.reply_text(f"✅ Glucosa registrada: {val} mg/dL (Hora: {dt.strftime('%H:%M')})")
     except (IndexError, ValueError):
-        await update.message.reply_text("Uso: /glucosa <valor>")
+        await update.message.reply_text("Uso: /glucosa <valor> [hora]")
 
 async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
@@ -172,9 +196,23 @@ async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Lo siento, no pude analizar esa comida. Intenta describirla mejor o subir una foto más clara.")
         return ConversationHandler.END
 
+    # Parse time if specified in text
+    dt = datetime.now()
+    if text:
+        # Simple check for HH:MM in text
+        import re
+        time_match = re.search(r'\b(\d{1,2}:\d{2})\b', text)
+        if time_match:
+            try:
+                h, m = map(int, time_match.group(1).split(":"))
+                dt = dt.replace(hour=h, minute=m, second=0, microsecond=0)
+            except Exception:
+                pass
+
     food_name = macros.get('food_name', text)
     summary = (
-        f"🥗 *Plato Identificado:* {food_name}\n\n"
+        f"🥗 *Plato Identificado:* {food_name}\n"
+        f"⏰ *Hora:* {dt.strftime('%H:%M')}\n\n"
         f"🍔 *Estimación de Nutrientes:*\n"
         f"🔥 Calorías: {macros.get('calories')} kcal\n"
         f"💪 Proteína: {macros.get('protein')} g\n"
@@ -189,7 +227,8 @@ async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'protein': macros.get('protein'),
         'carbs': macros.get('carbs'),
         'fat': macros.get('fat'),
-        'meal_type': MealType.SNACK # Default
+        'meal_type': macros.get('meal_type', 'merienda_tarde').lower(),
+        'fecha_hora': dt
     }
 
     reply_keyboard = [["Sí", "No"]]
@@ -245,7 +284,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 title="Documento vía Telegram",
                 document_type=doc_type,
                 file_path=file_path,
-                notes=caption
+                notes=caption,
+                fecha_hora=datetime.now()
             )
             session.add(doc)
             session.commit()

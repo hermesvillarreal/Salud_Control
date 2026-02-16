@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import api from '../services/api';
 
-export type MealType = 'desayuno' | 'almuerzo' | 'cena' | 'snack';
+export type MealType = 'desayuno' | 'merienda_manana' | 'almuerzo' | 'merienda_tarde' | 'cena' | 'merienda_postcena';
 
 export interface FoodRecord {
     id?: number;
     user_id?: number;
-    date?: string;
+    fecha_hora?: string;
     meal_type: MealType;
     description: string;
     calories?: number;
@@ -74,9 +74,9 @@ export const useHealthStore = create<HealthState>((set, get) => ({
             ]);
 
             const allMetrics: HealthMetric[] = [
-                ...weights.data.map((w: any) => ({ type: 'peso' as const, value: w.weight, unit: 'kg', timestamp: w.date })),
-                ...bp.data.map((b: any) => ({ type: 'presion' as const, value: b.systolic, unit: 'mmHg', timestamp: b.date })),
-                ...glucose.data.map((g: any) => ({ type: 'glucosa' as const, value: g.glucose_level, unit: 'mg/dL', timestamp: g.date }))
+                ...weights.data.map((w: any) => ({ type: 'peso' as const, value: w.weight, unit: 'kg', timestamp: w.fecha_hora })),
+                ...bp.data.map((b: any) => ({ type: 'presion' as const, value: b.systolic, unit: 'mmHg', timestamp: b.fecha_hora })),
+                ...glucose.data.map((g: any) => ({ type: 'glucosa' as const, value: g.glucose_level, unit: 'mg/dL', timestamp: g.fecha_hora }))
             ];
 
             set({ metrics: allMetrics, isLoading: false, lastUpdate: new Date().toISOString() });
