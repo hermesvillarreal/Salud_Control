@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Utensils, Scale, Activity, Droplets, LogOut } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
@@ -7,9 +7,19 @@ interface DashboardHeaderProps {
     onRegisterPeso: () => void;
     onRegisterPresion: () => void;
     onRegisterGlucosa: () => void;
+    onOpenTelegram: () => void;
+    isTelegramLinked: boolean;
+    onUnlinkTelegram: () => void;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onRegisterPresion, onRegisterGlucosa }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({
+    onRegisterPeso,
+    onRegisterPresion,
+    onRegisterGlucosa,
+    onOpenTelegram,
+    isTelegramLinked,
+    onUnlinkTelegram
+}) => {
     const navigate = useNavigate();
     const logout = useAuthStore((state) => state.logout);
 
@@ -62,6 +72,23 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onRegisterPeso, onReg
                     <Droplets className="w-4 h-4" />
                     <span>Glucosa</span>
                 </button>
+                {isTelegramLinked ? (
+                    <button
+                        onClick={onUnlinkTelegram}
+                        className="flex items-center gap-2 bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-xl font-medium transition-colors border border-red-200"
+                    >
+                        <X className="w-4 h-4" />
+                        <span>Desvincular Bot</span>
+                    </button>
+                ) : (
+                    <button
+                        onClick={onOpenTelegram}
+                        className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        <span>Bot Telegram</span>
+                    </button>
+                )}
                 <button
                     onClick={handleLogout}
                     className="hidden md:flex items-center gap-2 bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 px-4 py-2 rounded-xl font-medium transition-colors border border-slate-200"

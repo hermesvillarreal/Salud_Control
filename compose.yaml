@@ -23,7 +23,8 @@ services:
       - "8004:8000"
     environment:
       - DATABASE_URL=postgresql://salud_user:salud_password@db:5432/salud_control
-      - TELEGRAM_BOT_TOKEN=your_fallback_token_here
+      - TELEGRAM_BOT_TOKEN=8585112459:AAG-ZZnfe0sxA31_ct3l7K-VcJXN8HQxfLI
+      - GEMINI_API_KEY=[GCP_API_KEY]
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +44,21 @@ services:
       - VITE_API_URL=/api
     depends_on:
       - backend
+
+  telegram-bot:
+    build: ./backend
+    container_name: salud-control-bot
+    command: python run_bot.py
+    environment:
+      - DATABASE_URL=postgresql://salud_user:salud_password@db:5432/salud_control
+      - TELEGRAM_BOT_TOKEN=8585112459:AAG-ZZnfe0sxA31_ct3l7K-VcJXN8HQxfLI
+      - GEMINI_API_KEY=[GCP_API_KEY]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
 
 volumes:
   postgres_data:

@@ -7,20 +7,35 @@ import PressureChart from '../components/charts/PressureChart';
 import GlucoseChart from '../components/charts/GlucoseChart';
 import NutrientsChart from '../components/charts/NutrientsChart';
 import HealthModal from '../components/HealthModal';
+import TelegramBotModal from '../components/TelegramBotModal';
 import { useHealthStore } from '../stores/healthStore';
+import { useAuthStore } from '../stores/authStore';
+import api from '../services/api';
 
 const Dashboard: React.FC = () => {
     const { metrics, fetchMetrics, fetchFoodLogs, foodLogs } = useHealthStore();
+    const { user, updateUser } = useAuthStore();
 
     // Modal states
     const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
     const [isPressureModalOpen, setIsPressureModalOpen] = useState(false);
     const [isGlucoseModalOpen, setIsGlucoseModalOpen] = useState(false);
+    const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
 
     useEffect(() => {
         fetchMetrics();
         fetchFoodLogs();
+        refreshUser();
     }, [fetchMetrics, fetchFoodLogs]);
+
+    const refreshUser = async () => {
+        try {
+            const response = await api.get('/auth/me');
+            updateUser(response.data);
+        } catch (error) {
+            console.error('Error refreshing user data:', error);
+        }
+    };
 
     const handleRegisterPeso = () => {
         setIsWeightModalOpen(true);
@@ -32,6 +47,19 @@ const Dashboard: React.FC = () => {
 
     const handleRegisterGlucosa = () => {
         setIsGlucoseModalOpen(true);
+    };
+
+    const handleUnlinkTelegram = async () => {
+        if (!confirm('¿Estás seguro de que deseas desvincular el bot de Telegram?')) return;
+
+        try {
+            await api.post('/auth/telegram-unlink');
+            updateUser({ is_telegram_linked: false });
+            alert('Bot desvinculado correctamente.');
+        } catch (error) {
+            console.error('Error unlinking telegram:', error);
+            alert('Error al desvincular el bot.');
+        }
     };
 
     // Derived data for charts (fallback to mock if empty for demonstration, but aiming for real)
@@ -73,6 +101,9 @@ const Dashboard: React.FC = () => {
                     onRegisterPeso={handleRegisterPeso}
                     onRegisterPresion={handleRegisterPresion}
                     onRegisterGlucosa={handleRegisterGlucosa}
+                    onOpenTelegram={() => setIsTelegramModalOpen(true)}
+                    isTelegramLinked={user?.is_telegram_linked || false}
+                    onUnlinkTelegram={handleUnlinkTelegram}
                 />
 
                 {/* Tarjetas KPI */}
@@ -129,6 +160,11 @@ const Dashboard: React.FC = () => {
                 isOpen={isGlucoseModalOpen}
                 onClose={() => setIsGlucoseModalOpen(false)}
                 type="glucosa"
+            />
+
+            <TelegramBotModal
+                isOpen={isTelegramModalOpen}
+                onClose={() => setIsTelegramModalOpen(false)}
             />
         </div>
     );

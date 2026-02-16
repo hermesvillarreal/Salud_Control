@@ -64,9 +64,27 @@ def login(user_data: dict, session: Session = Depends(get_session)):
             "id": str(user.id),
             "username": user.username,
             "email": user.email,
-            "name": user.full_name or user.username
+            "name": user.full_name or user.username,
+            "is_telegram_linked": user.telegram_chat_id is not None
         }
     }
+
+@router.get("/auth/me")
+def get_me(user: User = Depends(get_current_user)):
+    return {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "name": user.full_name or user.username,
+        "is_telegram_linked": user.telegram_chat_id is not None
+    }
+
+@router.post("/auth/telegram-unlink")
+def unlink_telegram(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    user.telegram_chat_id = None
+    session.add(user)
+    session.commit()
+    return {"message": "Telegram account unlinked successfully"}
 
 @router.get("/auth/telegram-token")
 def get_telegram_token(user: User = Depends(get_current_user), session: Session = Depends(get_session)):

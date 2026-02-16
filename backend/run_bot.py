@@ -8,7 +8,7 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     ContextTypes,
-    ConversationFactory,
+    ConversationHandler,
     filters,
 )
 from sqlmodel import Session, select
@@ -57,6 +57,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"¡Bienvenido {user.full_name or user.username}! Tu cuenta ha sido vinculada correctamente.")
         else:
             await update.message.reply_text("Código de vinculación inválido o expirado.")
+
+async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    help_text = (
+        "🤖 *Comandos de Salud Control*\n\n"
+        "📈 *Métricas de Salud:*\n"
+        "• `/peso <valor>` - Registra tu peso actual (e.g., `/peso 75.5`)\n"
+        "• `/presion <sis> <dia>` - Registra tu presión arterial (e.g., `/presion 120 80`)\n"
+        "• `/glucosa <valor>` - Registra tu nivel de glucosa (e.g., `/glucosa 95`)\n\n"
+        "🥗 *Alimentación:*\n"
+        "• Envía un mensaje de texto describiendo lo que comiste (e.g., 'Comí cereal con leche')\n"
+        "• Envía una foto de tu comida con o sin descripción.\n"
+        "• El bot analizará los nutrientes y te pedirá confirmar el registro.\n\n"
+        "📄 *Documentos Clínicos:*\n"
+        "• Envía una foto o PDF con la palabra 'lab' o 'receta' en el comentario para guardarlo automáticamente.\n\n"
+        "⚙️ *Cuenta:*\n"
+        "• `/start <token>` - Vincula tu cuenta de Salud Control.\n"
+        "• `/desvincular` - Desvincula tu cuenta de este bot.\n"
+        "• `/help` - Muestra este mensaje de ayuda."
+    )
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
+async def desvincular(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = await get_user_by_chat_id(update.effective_chat.id)
+    if not user:
+        await update.message.reply_text("No tienes ninguna cuenta vinculada actualmente.")
+        return
+
+    with Session(engine) as session:
+        user.telegram_chat_id = None
+        session.add(user)
+        session.commit()
+        await update.message.reply_text("✅ Tu cuenta ha sido desvinculada correctamente. No recibiré más datos de este chat.")
 
 async def peso(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
@@ -115,14 +147,14 @@ async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text or update.message.caption
     if not text:
-        return ConversationFactory.END
+        return ConversationHandler.END
 
     await update.message.reply_text("Analizando tu comida... ⏳")
     macros = await analyze_food_text(text)
     
     if "error" in macros:
         await update.message.reply_text("Lo siento, no pude analizar esa comida. Intenta describirla mejor.")
-        return ConversationFactory.END
+        return ConversationHandler.END
 
     summary = (
         f"🍔 *Estimación de Nutrientes:*\n\n"
@@ -162,7 +194,7 @@ async def confirm_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Registro cancelado.", reply_markup=ReplyKeyboardRemove())
     
-    return ConversationFactory.END
+    return ConversationHandler.END
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
@@ -211,12 +243,16 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("peso", peso))
     application.add_handler(CommandHandler("presion", presion))
     application.add_handler(CommandHandler("glucosa", glucosa))
+    application.add_handler(CommandHandler("help", helper))
+    application.add_handler(CommandHandler("ayuda", helper))
+    application.add_handler(CommandHandler("desvincular", desvincular))
+    application.add_handler(CommandHandler("unlink", desvincular))
 
     # Conversation for food registration
-    food_conv = ConversationFactory(
+    food_conv = ConversationHandler(
         entry_points=[
             MessageHandler(filters.TEXT & (~filters.COMMAND), handle_food),
-            MessageHandler(filters.PHOTO & (~filters.CAPTION_ENTITY("bot_command")), handle_food)
+            MessageHandler(filters.PHOTO & (~filters.CaptionEntity("bot_command")), handle_food)
         ],
         states={
             CONFIRM_FOOD: [MessageHandler(filters.Regex("^(Sí|No)$"), confirm_food)],
