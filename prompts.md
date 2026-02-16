@@ -61,7 +61,7 @@ Ahora definamos los modelos de datos y la autenticación.
     -   **WeightRecord:** `id`, `user_id`, `date`, `weight` (float), `notes`.
     -   **BloodPressureRecord:** `id`, `user_id`, `date`, `systolic` (int), `diastolic` (int), `heart_rate` (int, opcional), `notes`.
     -   **GlucoseRecord:** `id`, `user_id`, `date`, `glucose_level` (float), `measurement_type` (e.g., ayuno, postprandial), `notes`.
-    -   **FoodRecord:** `id`, `user_id`, `date` (datetime), `meal_type` (desayuno, almuerzo, cena, snack), `description` (texto), `calories` (int), `protein` (float), `carbs` (float), `fat` (float), `image_url` (opcional).
+    -   **FoodRecord:** `id`, `user_id`, `date` (datetime), `meal_type` (desayuno, almuerzo, cena, merienda_manana, merienda_tarde, merienda_noche), `description` (texto), `calories` (int), `protein` (float), `carbs` (float), `fat` (float), `image_url` (opcional).
     -   **ExerciseRecord:** `id`, `user_id`, `date`, `exercise_type`, `duration_minutes`, `calories_burned`, `intensity` (baja, media, alta).
     -   **ClinicalDocument:** `id`, `user_id`, `date`, `title`, `document_type` (receta, laboratorio, imagen), `file_path`, `notes`.
 
