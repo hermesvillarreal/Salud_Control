@@ -17,7 +17,7 @@ from app.models import (
     User, WeightRecord, BloodPressureRecord, GlucoseRecord,
     FoodRecord, ClinicalDocument, DocumentType, MealType
 )
-from app.services.ai_service import analyze_food_text
+from app.services.ai_service import analyze_food_text, analyze_food_image
 
 # Enable logging
 logging.basicConfig(
@@ -150,23 +150,41 @@ async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     await update.message.reply_text("Analizando tu comida... ⏳")
-    macros = await analyze_food_text(text)
+    
+    # Check if it's a photo or text
+    if update.message.photo:
+        # Get the largest photo
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        
+        # Download photo as bytes
+        import io
+        photo_bytes = await file.download_as_bytearray()
+        
+        # Determine mime type (Telegram photos are usually jpg)
+        mime_type = "image/jpeg"
+        
+        macros = await analyze_food_image(bytes(photo_bytes), mime_type, text)
+    else:
+        macros = await analyze_food_text(text)
     
     if "error" in macros:
-        await update.message.reply_text("Lo siento, no pude analizar esa comida. Intenta describirla mejor.")
+        await update.message.reply_text("Lo siento, no pude analizar esa comida. Intenta describirla mejor o subir una foto más clara.")
         return ConversationHandler.END
 
+    food_name = macros.get('food_name', text)
     summary = (
-        f"🍔 *Estimación de Nutrientes:*\n\n"
+        f"🥗 *Plato Identificado:* {food_name}\n\n"
+        f"🍔 *Estimación de Nutrientes:*\n"
         f"🔥 Calorías: {macros.get('calories')} kcal\n"
         f"💪 Proteína: {macros.get('protein')} g\n"
         f"🍞 Carbohidratos: {macros.get('carbs')} g\n"
         f"🥑 Grasas: {macros.get('fat')} g\n\n"
-        "¿Deseas registrar esto?"
+        "¿Deseas registrar esto? Sí / No"
     )
     
     context.user_data['pending_food'] = {
-        'description': text,
+        'description': food_name,
         'calories': macros.get('calories'),
         'protein': macros.get('protein'),
         'carbs': macros.get('carbs'),
@@ -178,13 +196,15 @@ async def handle_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         summary,
         parse_mode="Markdown",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
     return CONFIRM_FOOD
 
 async def confirm_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
-    if update.message.text == "Sí":
+    text = update.message.text.lower().strip()
+    
+    if text in ["sí", "si", "s", "yes", "y", "ok"]:
         data = context.user_data.get('pending_food')
         with Session(engine) as session:
             record = FoodRecord(**data, user_id=user.id)
@@ -255,7 +275,7 @@ if __name__ == '__main__':
             MessageHandler(filters.PHOTO & (~filters.CaptionEntity("bot_command")), handle_food)
         ],
         states={
-            CONFIRM_FOOD: [MessageHandler(filters.Regex("^(Sí|No)$"), confirm_food)],
+            CONFIRM_FOOD: [MessageHandler(filters.Regex(r"^(?i)(Sí|Si|S|No|N|Yes|Y|Ok)$"), confirm_food)],
         },
         fallbacks=[],
     )

@@ -24,7 +24,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://salud_user:salud_password@db:5432/salud_control
       - TELEGRAM_BOT_TOKEN=8585112459:AAG-ZZnfe0sxA31_ct3l7K-VcJXN8HQxfLI
-      - GEMINI_API_KEY=[GCP_API_KEY]
+      - GEMINI_API_KEY=AIzaSyC5tFDpplfQy1RlQ1r6YDZF95wgtgd2O4g
     depends_on:
       db:
         condition: service_healthy
@@ -52,7 +52,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://salud_user:salud_password@db:5432/salud_control
       - TELEGRAM_BOT_TOKEN=8585112459:AAG-ZZnfe0sxA31_ct3l7K-VcJXN8HQxfLI
-      - GEMINI_API_KEY=[GCP_API_KEY]
+      - GEMINI_API_KEY=AIzaSyC5tFDpplfQy1RlQ1r6YDZF95wgtgd2O4g
     depends_on:
       db:
         condition: service_healthy
