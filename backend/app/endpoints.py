@@ -150,6 +150,8 @@ def log_food(
     user: User = Depends(get_current_user), 
     session: Session = Depends(get_session)
 ):
+    if 'meal_type' in data and isinstance(data['meal_type'], str):
+        data['meal_type'] = data['meal_type'].lower()
     record = FoodRecord(**data, user_id=user.id)
     session.add(record)
     session.commit()

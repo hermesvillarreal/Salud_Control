@@ -44,7 +44,10 @@ async def analyze_food_text(description: str) -> Dict[str, Any]:
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
         
-        return json.loads(content)
+        result = json.loads(content)
+        if 'meal_type' in result:
+            result['meal_type'] = result['meal_type'].lower()
+        return result
     except Exception as e:
         print(f"Error in analyze_food_text: {e}")
         return {
@@ -95,7 +98,10 @@ async def analyze_food_image(image_bytes: bytes, mime_type: str, description: st
         elif "```" in content:
             content = content.split("```")[1].split("```")[0].strip()
         
-        return json.loads(content)
+        result = json.loads(content)
+        if 'meal_type' in result:
+            result['meal_type'] = result['meal_type'].lower()
+        return result
     except Exception as e:
         print(f"Error in analyze_food_image: {e}")
         return {
