@@ -13,6 +13,7 @@ const ExerciseLog: React.FC = () => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const recalcDescRef = useRef<HTMLTextAreaElement>(null);
 
     // Confirmation/Edit state
     const [estimatedExercise, setEstimatedExercise] = useState<Partial<ExerciseRecord> | null>(null);
@@ -197,14 +198,57 @@ const ExerciseLog: React.FC = () => {
                                     <div className="flex justify-between items-start mb-6">
                                         <div>
                                             {editMode ? (
-                                                <div className="mb-2">
-                                                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Tipo de Ejercicio</label>
-                                                    <input
-                                                        type="text"
-                                                        value={estimatedExercise.exercise_type}
-                                                        onChange={(e) => handleEditChange('exercise_type', e.target.value)}
-                                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm"
-                                                    />
+                                                <div className="mb-4 space-y-3">
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Re-calcular con IA</label>
+                                                        <div className="flex gap-2">
+                                                            <textarea
+                                                                ref={recalcDescRef}
+                                                                placeholder="Ej: Corrí 45 minutos..."
+                                                                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm resize-none h-20"
+                                                            />
+                                                            <button
+                                                                onClick={async () => {
+                                                                    const val = recalcDescRef.current?.value;
+                                                                    if (!val?.trim()) return;
+
+                                                                    setIsAnalyzing(true);
+                                                                    try {
+                                                                        const response = await api.post('/exercise/analyze', null, {
+                                                                            params: { description: val }
+                                                                        });
+                                                                        setEstimatedExercise(prev => ({
+                                                                            ...prev,
+                                                                            ...response.data,
+                                                                            id: prev?.id,
+                                                                            user_id: prev?.user_id,
+                                                                            fecha_hora: prev?.fecha_hora
+                                                                        }));
+                                                                    } catch (error) {
+                                                                        console.error("Error re-analyzing:", error);
+                                                                        alert("Error al re-analizar.");
+                                                                    } finally {
+                                                                        setIsAnalyzing(false);
+                                                                    }
+                                                                }}
+                                                                disabled={isAnalyzing}
+                                                                className="bg-orange-100 hover:bg-orange-200 text-orange-700 p-3 rounded-xl transition-colors flex items-center justify-center disabled:opacity-50"
+                                                                title="Re-analizar con IA"
+                                                            >
+                                                                {isAnalyzing ? <div className="w-5 h-5 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mb-2">
+                                                        <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Tipo de Ejercicio</label>
+                                                        <input
+                                                            type="text"
+                                                            value={estimatedExercise.exercise_type}
+                                                            onChange={(e) => handleEditChange('exercise_type', e.target.value)}
+                                                            className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm"
+                                                        />
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <>

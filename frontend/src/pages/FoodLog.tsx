@@ -156,20 +156,65 @@ const FoodLog: React.FC = () => {
                                     <div className="flex justify-between items-start mb-6">
                                         <div>
                                             {editMode ? (
-                                                <div className="mb-2">
-                                                    <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Tipo de Comida</label>
-                                                    <select
-                                                        value={estimatedFood.meal_type?.toLowerCase()}
-                                                        onChange={(e) => handleEditChange('meal_type', e.target.value.toLowerCase())}
-                                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm"
-                                                    >
-                                                        <option value="desayuno">Desayuno</option>
-                                                        <option value="merienda_manana">Merienda Mañana</option>
-                                                        <option value="almuerzo">Almuerzo</option>
-                                                        <option value="merienda_tarde">Merienda Tarde</option>
-                                                        <option value="cena">Cena</option>
-                                                        <option value="merienda_postcena">Merienda Postcena</option>
-                                                    </select>
+                                                <div className="mb-4 space-y-3">
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Descripción (Para re-calcular)</label>
+                                                        <div className="flex gap-2">
+                                                            <textarea
+                                                                value={estimatedFood.description}
+                                                                onChange={(e) => handleEditChange('description', e.target.value)}
+                                                                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm resize-none h-20"
+                                                                placeholder="Describe la comida para recalcular..."
+                                                            />
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (!estimatedFood.description?.trim()) return;
+                                                                    setIsAnalyzing(true);
+                                                                    try {
+                                                                        const response = await api.post('/food/analyze', null, {
+                                                                            params: { description: estimatedFood.description }
+                                                                        });
+                                                                        setEstimatedFood(prev => ({
+                                                                            ...prev,
+                                                                            ...response.data,
+                                                                            // Ensure we keep the ID and existing date (unless distinct logic needed)
+                                                                            id: prev?.id,
+                                                                            user_id: prev?.user_id,
+                                                                            fecha_hora: prev?.fecha_hora,
+                                                                            // If backend returns meal_type, use it, else keep existing or default
+                                                                            meal_type: (response.data.meal_type || prev?.meal_type || 'almuerzo').toLowerCase()
+                                                                        }));
+                                                                    } catch (error) {
+                                                                        console.error("Error re-analyzing:", error);
+                                                                        alert("Error al re-analizar.");
+                                                                    } finally {
+                                                                        setIsAnalyzing(false);
+                                                                    }
+                                                                }}
+                                                                disabled={isAnalyzing || !estimatedFood.description?.trim()}
+                                                                className="bg-green-100 hover:bg-green-200 text-green-700 p-3 rounded-xl transition-colors flex items-center justify-center disabled:opacity-50"
+                                                                title="Re-analizar con IA"
+                                                            >
+                                                                {isAnalyzing ? <div className="w-5 h-5 border-2 border-green-600 border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Tipo de Comida</label>
+                                                        <select
+                                                            value={estimatedFood.meal_type?.toLowerCase()}
+                                                            onChange={(e) => handleEditChange('meal_type', e.target.value.toLowerCase())}
+                                                            className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white transition-all font-medium text-sm"
+                                                        >
+                                                            <option value="desayuno">Desayuno</option>
+                                                            <option value="merienda_manana">Merienda Mañana</option>
+                                                            <option value="almuerzo">Almuerzo</option>
+                                                            <option value="merienda_tarde">Merienda Tarde</option>
+                                                            <option value="cena">Cena</option>
+                                                            <option value="merienda_postcena">Merienda Postcena</option>
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <>
