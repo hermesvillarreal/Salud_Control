@@ -16,6 +16,16 @@ export interface FoodRecord {
     image_url?: string;
 }
 
+export interface ExerciseRecord {
+    id?: number;
+    user_id?: number;
+    fecha_hora?: string;
+    exercise_type: string;
+    duration_minutes: number;
+    calories_burned?: number;
+    intensity: 'baja' | 'media' | 'alta';
+}
+
 interface HealthMetric {
     type: 'peso' | 'presion' | 'glucosa';
     value: number;
@@ -26,6 +36,7 @@ interface HealthMetric {
 interface HealthState {
     metrics: HealthMetric[];
     foodLogs: FoodRecord[];
+    exerciseLogs: ExerciseRecord[];
     lastUpdate: string | null;
     isLoading: boolean;
     error: string | null;
@@ -34,24 +45,28 @@ interface HealthState {
     setFoodLogs: (logs: FoodRecord[]) => void;
     addFoodLog: (log: FoodRecord) => void;
     fetchFoodLogs: () => Promise<void>;
+    setExerciseLogs: (logs: ExerciseRecord[]) => void;
+    addExerciseLog: (log: ExerciseRecord) => void;
+    fetchExerciseLogs: () => Promise<void>;
     fetchMetrics: () => Promise<void>;
     setLoading: (isLoading: boolean) => void;
     setError: (error: string | null) => void;
 }
 
-export const useHealthStore = create<HealthState>((set, get) => ({
+export const useHealthStore = create<HealthState>((set) => ({
     metrics: [],
     foodLogs: [],
+    exerciseLogs: [],
     lastUpdate: null,
     isLoading: false,
     error: null,
-    setMetrics: (metrics) => set({ metrics, lastUpdate: new Date().toISOString() }),
-    addMetric: (metric) => set((state) => ({
+    setMetrics: (metrics: HealthMetric[]) => set({ metrics, lastUpdate: new Date().toISOString() }),
+    addMetric: (metric: HealthMetric) => set((state: HealthState) => ({
         metrics: [metric, ...state.metrics],
         lastUpdate: new Date().toISOString()
     })),
-    setFoodLogs: (foodLogs) => set({ foodLogs, lastUpdate: new Date().toISOString() }),
-    addFoodLog: (log) => set((state) => ({
+    setFoodLogs: (foodLogs: FoodRecord[]) => set({ foodLogs, lastUpdate: new Date().toISOString() }),
+    addFoodLog: (log: FoodRecord) => set((state: HealthState) => ({
         foodLogs: [log, ...state.foodLogs],
         lastUpdate: new Date().toISOString()
     })),
@@ -62,6 +77,20 @@ export const useHealthStore = create<HealthState>((set, get) => ({
             set({ foodLogs: response.data, isLoading: false });
         } catch (error: any) {
             set({ error: error.message || 'Error fetching food logs', isLoading: false });
+        }
+    },
+    setExerciseLogs: (exerciseLogs: ExerciseRecord[]) => set({ exerciseLogs, lastUpdate: new Date().toISOString() }),
+    addExerciseLog: (log: ExerciseRecord) => set((state: HealthState) => ({
+        exerciseLogs: [log, ...state.exerciseLogs],
+        lastUpdate: new Date().toISOString()
+    })),
+    fetchExerciseLogs: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.get('/exercise');
+            set({ exerciseLogs: response.data, isLoading: false });
+        } catch (error: any) {
+            set({ error: error.message || 'Error fetching exercise logs', isLoading: false });
         }
     },
     fetchMetrics: async () => {
@@ -84,6 +113,6 @@ export const useHealthStore = create<HealthState>((set, get) => ({
             set({ error: error.message || 'Error fetching metrics', isLoading: false });
         }
     },
-    setLoading: (isLoading) => set({ isLoading }),
-    setError: (error) => set({ error }),
+    setLoading: (isLoading: boolean) => set({ isLoading }),
+    setError: (error: string | null) => set({ error }),
 }));

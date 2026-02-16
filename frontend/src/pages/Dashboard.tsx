@@ -13,7 +13,7 @@ import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
 
 const Dashboard: React.FC = () => {
-    const { metrics, fetchMetrics, fetchFoodLogs, foodLogs } = useHealthStore();
+    const { metrics, fetchMetrics, fetchFoodLogs, foodLogs, fetchExerciseLogs } = useHealthStore();
     const { user, updateUser } = useAuthStore();
 
     // Modal states
@@ -25,8 +25,9 @@ const Dashboard: React.FC = () => {
     useEffect(() => {
         fetchMetrics();
         fetchFoodLogs();
+        fetchExerciseLogs();
         refreshUser();
-    }, [fetchMetrics, fetchFoodLogs]);
+    }, [fetchMetrics, fetchFoodLogs, fetchExerciseLogs]);
 
     const refreshUser = async () => {
         try {

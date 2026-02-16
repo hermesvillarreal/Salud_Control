@@ -130,3 +130,89 @@ async def analyze_health_summary(user_history: Dict[str, Any]) -> str:
     except Exception as e:
         print(f"Error in analyze_health_summary: {e}")
         return "No se pudo generar el resumen de salud en este momento."
+
+async def analyze_exercise_text(description: str) -> Dict[str, Any]:
+    """
+    Analyzes exercise description and returns estimated details.
+    Returns JSON format: {"exercise_type": str, "duration_minutes": int, "intensity": "baja"|"media"|"alta", "calories_burned": int}
+    """
+    if not API_KEY:
+        return {"error": "AI service not configured"}
+
+    prompt = f"""
+    Actúa como un preparador físico experto. Analiza la siguiente descripción de ejercicio y estima sus detalles.
+    Responde ÚNICAMENTE con un objeto JSON válido con los siguientes campos:
+    - exercise_type (string, corto y descriptivo en español, ej: 'Caminata', 'Running', 'Gimnasio')
+    - duration_minutes (entero)
+    - intensity (string, debe ser uno de: baja, media, alta)
+    - calories_burned (entero, estimación basada en el tipo, duración e intensidad)
+
+    Si no puedes determinar la duración, intenta dar una estimación lógica o usa 30 como valor por defecto.
+    Ejercicio: {description}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        content = response.text.strip()
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        return json.loads(content)
+    except Exception as e:
+        print(f"Error in analyze_exercise_text: {e}")
+        return {
+            "exercise_type": "Desconocido",
+            "duration_minutes": 0,
+            "intensity": "media",
+            "calories_burned": 0,
+            "error": "Failed to analyze exercise"
+        }
+
+async def analyze_exercise_image(image_bytes: bytes, mime_type: str, description: str = "") -> Dict[str, Any]:
+    """
+    Analyzes exercise image and optional description.
+    Uses Gemini 2.5 Flash vision capabilities.
+    """
+    if not API_KEY:
+        return {"error": "AI service not configured"}
+
+    prompt = f"""
+    Actúa como un preparador físico experto. Analiza la imagen de la actividad física adjunta (y la descripción opcional) y estima sus detalles.
+    
+    Descripción opcional: {description}
+    
+    Responde ÚNICAMENTE con un objeto JSON válido con los siguientes campos:
+    - exercise_type (string, corto y descriptivo en español, ej: 'Running', 'Gimnasio', 'Ciclismo')
+    - duration_minutes (entero, estima basado en la imagen o descripción)
+    - intensity (string, debe ser uno de: baja, media, alta)
+    - calories_burned (entero, estimación basada en el tipo, duración e intensidad)
+
+    Si no puedes determinar los valores o no hay ejercicio en la imagen, responde con un objeto JSON con error.
+    """
+
+    try:
+        image_part = {
+            "mime_type": mime_type,
+            "data": image_bytes
+        }
+        
+        response = model.generate_content([prompt, image_part])
+        content = response.text.strip()
+        
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        return json.loads(content)
+    except Exception as e:
+        print(f"Error in analyze_exercise_image: {e}")
+        return {
+            "exercise_type": "Desconocido",
+            "duration_minutes": 0,
+            "intensity": "media",
+            "calories_burned": 0,
+            "error": "Failed to analyze exercise image"
+        }

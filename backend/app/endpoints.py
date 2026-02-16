@@ -13,7 +13,10 @@ from app.models import (
 from app.auth.hash_utils import get_password_hash, verify_password
 from app.auth.jwt_utils import create_access_token
 from app.auth.dependencies import get_current_user
-from app.services.ai_service import analyze_food_text, analyze_health_summary
+from app.services.ai_service import (
+    analyze_food_text, analyze_food_image, analyze_health_summary,
+    analyze_exercise_text, analyze_exercise_image
+)
 
 router = APIRouter()
 
@@ -168,6 +171,22 @@ def log_exercise(
     session.commit()
     session.refresh(record)
     return record
+
+
+@router.post("/exercise/analyze")
+async def analyze_exercise(description: str, user: User = Depends(get_current_user)):
+    exercise_data = await analyze_exercise_text(description)
+    return exercise_data
+
+@router.post("/exercise/analyze-image")
+async def analyze_exercise_img(
+    description: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user)
+):
+    image_bytes = await file.read()
+    exercise_data = await analyze_exercise_image(image_bytes, file.content_type, description or "")
+    return exercise_data
 
 @router.get("/exercise", response_model=List[ExerciseRecord])
 def get_exercise_logs(user: User = Depends(get_current_user), session: Session = Depends(get_session)):

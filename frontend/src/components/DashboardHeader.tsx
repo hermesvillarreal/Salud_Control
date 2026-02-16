@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
@@ -57,6 +57,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 >
                     <Utensils className="w-4 h-4" />
                     <span>Registrar Comida</span>
+                </button>
+                <button
+                    onClick={() => navigate('/exercise-log')}
+                    className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
+                    <Dumbbell className="w-4 h-4" />
+                    <span>Registrar Ejercicio</span>
                 </button>
                 <button
                     onClick={onRegisterPresion}

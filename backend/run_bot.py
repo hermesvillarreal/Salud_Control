@@ -15,9 +15,12 @@ from sqlmodel import Session, select
 from app.database import engine
 from app.models import (
     User, WeightRecord, BloodPressureRecord, GlucoseRecord,
-    FoodRecord, ClinicalDocument, DocumentType, MealType
+    FoodRecord, ExerciseRecord, ClinicalDocument, DocumentType, MealType, IntensityType
 )
-from app.services.ai_service import analyze_food_text, analyze_food_image
+from app.services.ai_service import (
+    analyze_food_text, analyze_food_image,
+    analyze_exercise_text, analyze_exercise_image
+)
 
 # Enable logging
 logging.basicConfig(
@@ -27,6 +30,7 @@ logging.basicConfig(
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CONFIRM_FOOD = 1
+CONFIRM_EXERCISE = 2
 
 def parse_time(args: list, start_idx: int) -> datetime:
     """Helper to parse time from command arguments."""
@@ -88,8 +92,10 @@ async def helper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• `/glucosa <valor>` - Registra tu nivel de glucosa (e.g., `/glucosa 95`)\n\n"
         "🥗 *Alimentación:*\n"
         "• Envía un mensaje de texto describiendo lo que comiste (e.g., 'Comí cereal con leche')\n"
-        "• Envía una foto de tu comida con o sin descripción.\n"
-        "• El bot analizará los nutrientes y te pedirá confirmar el registro.\n\n"
+        "• Envía una foto de tu comida con o sin descripción.\n\n"
+        "🏃‍♂️ *Ejercicios:*\n"
+        "• `/ejercicio <descripción>` - Registra tu actividad física (e.g., `/ejercicio Corrí 5km`)\n"
+        "• También puedes enviar una foto de tu entrenamiento con el comando `/ejercicio` en el texto.\n\n"
         "📄 *Documentos Clínicos:*\n"
         "• Envía una foto o PDF con la palabra 'lab' o 'receta' en el comentario para guardarlo automáticamente.\n\n"
         "⚙️ *Cuenta:*\n"
@@ -255,6 +261,78 @@ async def confirm_food(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     return ConversationHandler.END
 
+async def handle_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = await get_user_by_chat_id(update.effective_chat.id)
+    if not user:
+        await update.message.reply_text("Por favor, usa /start <token> para vincular tu cuenta.")
+        return ConversationHandler.END
+
+    text = " ".join(context.args) if context.args else (update.message.caption or "").replace("/ejercicio", "").strip()
+    
+    if not text and not update.message.photo:
+        await update.message.reply_text("Uso: /ejercicio <descripción> o envía una foto con el comando /ejercicio")
+        return ConversationHandler.END
+
+    await update.message.reply_text("Analizando tu ejercicio... 🏃‍♂️⏳")
+    
+    if update.message.photo:
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        photo_bytes = await file.download_as_bytearray()
+        exercise_data = await analyze_exercise_image(bytes(photo_bytes), "image/jpeg", text)
+    else:
+        exercise_data = await analyze_exercise_text(text)
+    
+    if "error" in exercise_data:
+        await update.message.reply_text("Lo siento, no pude analizar el ejercicio. Intenta describirlo con más detalle.")
+        return ConversationHandler.END
+
+    dt = datetime.now()
+    exercise_name = exercise_data.get('exercise_type', 'Ejercicio')
+    duration = exercise_data.get('duration_minutes', 0)
+    intensity = exercise_data.get('intensity', 'media')
+    calories = exercise_data.get('calories_burned', 0)
+
+    summary = (
+        f"🏃‍♂️ *Actividad:* {exercise_name}\n"
+        f"⏰ *Duración:* {duration} min\n"
+        f"⚡ *Intensidad:* {intensity.capitalize()}\n"
+        f"🔥 *Calorías estimadas:* {calories} kcal\n\n"
+        "¿Deseas registrar este ejercicio? Sí / No"
+    )
+    
+    context.user_data['pending_exercise'] = {
+        'exercise_type': exercise_name,
+        'duration_minutes': duration,
+        'intensity': intensity,
+        'calories_burned': calories,
+        'fecha_hora': dt
+    }
+
+    reply_keyboard = [["Sí", "No"]]
+    await update.message.reply_text(
+        summary,
+        parse_mode="Markdown",
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
+    )
+    return CONFIRM_EXERCISE
+
+async def confirm_exercise(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = await get_user_by_chat_id(update.effective_chat.id)
+    text = update.message.text.lower().strip()
+    
+    if text in ["sí", "si", "s", "yes", "y", "ok"]:
+        data = context.user_data.get('pending_exercise')
+        with Session(engine) as session:
+            record = ExerciseRecord(**data, user_id=user.id)
+            session.add(record)
+            session.commit()
+            await update.message.reply_text("✅ Ejercicio registrado correctamente.", reply_markup=ReplyKeyboardRemove())
+    else:
+        await update.message.reply_text("Registro cancelado.", reply_markup=ReplyKeyboardRemove())
+    
+    return ConversationHandler.END
+
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = await get_user_by_chat_id(update.effective_chat.id)
     if not user:
@@ -320,6 +398,19 @@ if __name__ == '__main__':
         fallbacks=[],
     )
     application.add_handler(food_conv)
+
+    # Conversation for exercise registration
+    exercise_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("ejercicio", handle_exercise),
+            MessageHandler(filters.PHOTO & filters.CaptionRegex(r"(?i)^/ejercicio"), handle_exercise)
+        ],
+        states={
+            CONFIRM_EXERCISE: [MessageHandler(filters.Regex(r"^(?i)(Sí|Si|S|No|N|Yes|Y|Ok)$"), confirm_exercise)],
+        },
+        fallbacks=[],
+    )
+    application.add_handler(exercise_conv)
 
     # Document handler
     application.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, handle_document))
