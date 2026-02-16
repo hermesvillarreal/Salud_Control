@@ -80,8 +80,11 @@ const Dashboard: React.FC = () => {
         .reverse() || [];
 
     // Calculate nutrients for today
-    const today = new Date().toISOString().split('T')[0];
-    const todaysFood = foodLogs.filter(f => f.date?.startsWith(today));
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - offset);
+    const today = localDate.toISOString().split('T')[0];
+    const todaysFood = foodLogs.filter(f => f.fecha_hora?.startsWith(today));
 
     const nutrientsData = [
         { name: 'Proteína', value: todaysFood.reduce((acc, f) => acc + (f.protein || 0), 0), color: '#3b82f6' },
