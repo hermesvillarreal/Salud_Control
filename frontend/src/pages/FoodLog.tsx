@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Utensils, PieChart, Pencil } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Utensils, PieChart, Pencil, Camera, Image as ImageIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, FoodRecord, MealType } from '../stores/healthStore';
@@ -12,6 +12,9 @@ const FoodLog: React.FC = () => {
     const [description, setDescription] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Confirmation/Edit state
     const [estimatedFood, setEstimatedFood] = useState<Partial<FoodRecord> | null>(null);
@@ -21,6 +24,16 @@ const FoodLog: React.FC = () => {
         fetchFoodLogs();
     }, [fetchFoodLogs]);
 
+    useEffect(() => {
+        if (selectedImage) {
+            const url = URL.createObjectURL(selectedImage);
+            setPreviewUrl(url);
+            return () => URL.revokeObjectURL(url);
+        } else {
+            setPreviewUrl(null);
+        }
+    }, [selectedImage]);
+
     // Helper to get local date in ISO format (YYYY-MM-DDTHH:mm)
     const getLocalISOString = () => {
         const now = new Date();
@@ -29,18 +42,38 @@ const FoodLog: React.FC = () => {
         return localDate.toISOString().slice(0, 16);
     };
 
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setSelectedImage(e.target.files[0]);
+        }
+    };
+
     const handleAnalyze = async () => {
-        if (!description.trim()) return;
+        if (!description.trim() && !selectedImage) return;
 
         setIsAnalyzing(true);
         try {
-            const response = await api.post('/food/analyze', null, {
-                params: { description }
-            });
+            let response;
+
+            if (selectedImage) {
+                const formData = new FormData();
+                formData.append('file', selectedImage);
+                if (description.trim()) {
+                    formData.append('description', description);
+                }
+
+                response = await api.post('/food/analyze-image', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+            } else {
+                response = await api.post('/food/analyze', null, {
+                    params: { description }
+                });
+            }
 
             // Backend returns: { calories, protein, carbs, fat, meal_type }
             setEstimatedFood({
-                description,
+                description: response.data.food_name || description || "Comida detectada",
                 calories: response.data.calories,
                 protein: response.data.protein,
                 carbs: response.data.carbs,
@@ -51,6 +84,10 @@ const FoodLog: React.FC = () => {
                 fecha_hora: getLocalISOString()
             });
             setEditMode(false);
+            // Clear image after analysis if desired, or keep it? Let's clear to show we processed it.
+            // actually keeping it might be confusing if we don't store it. For now let's clear.
+            setSelectedImage(null);
+
         } catch (error) {
             console.error('Error analyzing food:', error);
             alert('Error al analizar la comida. Por favor intenta de nuevo.');
@@ -128,29 +165,64 @@ const FoodLog: React.FC = () => {
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                                     ¿Qué has comido hoy?
                                 </label>
-                                <textarea
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Ej: Dos huevos revueltos con una tostada integral y medio aguacate..."
-                                    className="w-full h-32 px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none resize-none bg-slate-50/50"
-                                />
-                                <button
-                                    onClick={handleAnalyze}
-                                    disabled={isAnalyzing || !description.trim()}
-                                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2 transform active:scale-95"
-                                >
-                                    {isAnalyzing ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            <span>Analizando con IA...</span>
+
+                                <div className="relative">
+                                    <textarea
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Describe tu comida o sube una foto..."
+                                        className="w-full h-32 px-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all outline-none resize-none bg-slate-50/50"
+                                    />
+
+                                    {/* Image Preview Overlay */}
+                                    {previewUrl && (
+                                        <div className="absolute top-2 right-2 bottom-2 w-32 rounded-xl overflow-hidden border-2 border-green-500 shadow-md group">
+                                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => setSelectedImage(null)}
+                                                className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <>
-                                            <Sparkles className="w-5 h-5" />
-                                            <span>Analizar con IA</span>
-                                        </>
                                     )}
-                                </button>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileSelect}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-4 rounded-2xl transition-all flex items-center justify-center gap-2 font-medium"
+                                        title="Subir foto"
+                                    >
+                                        <Camera className="w-5 h-5" />
+                                        <span className="hidden sm:inline">Foto</span>
+                                    </button>
+
+                                    <button
+                                        onClick={handleAnalyze}
+                                        disabled={isAnalyzing || (!description.trim() && !selectedImage)}
+                                        className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2 transform active:scale-95"
+                                    >
+                                        {isAnalyzing ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                <span>Analizando...</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-5 h-5" />
+                                                <span>Analizar con IA</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

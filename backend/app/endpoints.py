@@ -144,6 +144,19 @@ async def analyze_food(description: str, user: User = Depends(get_current_user))
     macros = await analyze_food_text(description)
     return macros
 
+@router.post("/food/analyze-image")
+async def analyze_food_img(
+    description: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user)
+):
+    image_bytes = await file.read()
+    print(f"DEBUG: Processing image analysis for user {user.id}")
+    macros = await analyze_food_image(image_bytes, file.content_type, description or "")
+    if "error" in macros:
+        print(f"DEBUG: Error in analysis: {macros['error']}")
+    return macros
+
 @router.post("/food/log")
 def log_food(
     data: dict, 
