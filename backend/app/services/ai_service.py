@@ -13,6 +13,29 @@ else:
 # Model configuration
 model = genai.GenerativeModel('gemini-2.5-flash')
 
+# Helper to sanitize meal_type
+def sanitize_meal_type(meal_type: str) -> str:
+    """Ensures meal_type is one of the valid enum values."""
+    meal_type = meal_type.lower().strip()
+    valid_types = [
+        "desayuno", "merienda_manana", "almuerzo", 
+        "merienda_tarde", "cena", "merienda_postcena"
+    ]
+    
+    if meal_type in valid_types:
+        return meal_type
+    
+    # Map common variations
+    mapping = {
+        "merienda": "merienda_tarde",
+        "snack": "merienda_tarde",
+        "media_manana": "merienda_manana",
+        "desayuno_tardio": "almuerzo",
+        "cena_temprana": "merienda_tarde"
+    }
+    
+    return mapping.get(meal_type, "almuerzo") # Default fallback
+
 async def analyze_food_text(description: str) -> Dict[str, Any]:
     """
     Analyzes food description and returns estimated macronutrients.
@@ -46,7 +69,7 @@ async def analyze_food_text(description: str) -> Dict[str, Any]:
         
         result = json.loads(content)
         if 'meal_type' in result:
-            result['meal_type'] = result['meal_type'].lower()
+            result['meal_type'] = sanitize_meal_type(result['meal_type'])
         return result
     except Exception as e:
         print(f"Error in analyze_food_text: {e}")
@@ -100,7 +123,7 @@ async def analyze_food_image(image_bytes: bytes, mime_type: str, description: st
         
         result = json.loads(content)
         if 'meal_type' in result:
-            result['meal_type'] = result['meal_type'].lower()
+            result['meal_type'] = sanitize_meal_type(result['meal_type'])
         return result
     except Exception as e:
         print(f"Error in analyze_food_image: {e}")

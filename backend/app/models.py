@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel, Relationship, AutoString
 from enum import Enum
 
 class UserRole(str, Enum):
@@ -11,7 +11,7 @@ class UserBase(SQLModel):
     username: str = Field(index=True, unique=True)
     email: str = Field(index=True, unique=True)
     full_name: Optional[str] = None
-    role: UserRole = Field(default=UserRole.USER)
+    role: UserRole = Field(default=UserRole.USER, sa_type=AutoString)
 
 class UserCreate(UserBase):
     password: str
@@ -73,7 +73,7 @@ class FoodRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
     fecha_hora: datetime = Field(default_factory=datetime.now)
-    meal_type: MealType
+    meal_type: MealType = Field(sa_type=AutoString)
     description: str
     calories: Optional[int] = None
     protein: Optional[float] = None
@@ -95,7 +95,7 @@ class ExerciseRecord(SQLModel, table=True):
     exercise_type: str
     duration_minutes: int
     calories_burned: Optional[int] = None
-    intensity: IntensityType
+    intensity: IntensityType = Field(sa_type=AutoString)
 
     user: User = Relationship(back_populates="exercise_records")
 
@@ -110,7 +110,7 @@ class ClinicalDocument(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     fecha_hora: datetime = Field(default_factory=datetime.now)
     title: str
-    document_type: DocumentType
+    document_type: DocumentType = Field(sa_type=AutoString)
     file_path: str
     notes: Optional[str] = None
 

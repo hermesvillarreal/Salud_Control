@@ -45,7 +45,9 @@ const FoodLog: React.FC = () => {
                 protein: response.data.protein,
                 carbs: response.data.carbs,
                 fat: response.data.fat,
-                meal_type: (response.data.meal_type || 'almuerzo').toLowerCase(),
+                meal_type: (['desayuno', 'merienda_manana', 'almuerzo', 'merienda_tarde', 'cena', 'merienda_postcena'].includes(response.data.meal_type?.toLowerCase())
+                    ? response.data.meal_type.toLowerCase()
+                    : 'almuerzo'),
                 fecha_hora: getLocalISOString()
             });
             setEditMode(false);
@@ -182,7 +184,9 @@ const FoodLog: React.FC = () => {
                                                                             user_id: prev?.user_id,
                                                                             fecha_hora: prev?.fecha_hora,
                                                                             // If backend returns meal_type, use it, else keep existing or default
-                                                                            meal_type: (response.data.meal_type || prev?.meal_type || 'almuerzo').toLowerCase()
+                                                                            meal_type: (['desayuno', 'merienda_manana', 'almuerzo', 'merienda_tarde', 'cena', 'merienda_postcena'].includes(response.data.meal_type?.toLowerCase())
+                                                                                ? response.data.meal_type.toLowerCase()
+                                                                                : (prev?.meal_type || 'almuerzo'))
                                                                         }));
                                                                     } catch (error) {
                                                                         console.error("Error re-analyzing:", error);
