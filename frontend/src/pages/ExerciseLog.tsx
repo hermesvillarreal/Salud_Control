@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, ImageIcon, Pencil } from 'lucide-react';
+import { ArrowLeft, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, ExerciseRecord } from '../stores/healthStore';
+import { formatLocalISO, normalizeToBackendISO } from '../utils/dateUtils';
 
 const ExerciseLog: React.FC = () => {
     const navigate = useNavigate();
@@ -20,16 +21,13 @@ const ExerciseLog: React.FC = () => {
     const [editMode, setEditMode] = useState(false);
 
     useEffect(() => {
+        console.log('Fetching exercise logs...');
         fetchExerciseLogs();
     }, [fetchExerciseLogs]);
 
-    // Helper to get local date in ISO format (YYYY-MM-DDTHH:mm)
-    const getLocalISOString = () => {
-        const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        const localDate = new Date(now.getTime() - offset);
-        return localDate.toISOString().slice(0, 16);
-    };
+    useEffect(() => {
+        console.log('Exercise logs updated:', exerciseLogs);
+    }, [exerciseLogs]);
 
     const handleAnalyze = async () => {
         if (!description.trim()) return;
@@ -45,7 +43,7 @@ const ExerciseLog: React.FC = () => {
                 duration_minutes: response.data.duration_minutes,
                 intensity: response.data.intensity,
                 calories_burned: response.data.calories_burned,
-                fecha_hora: getLocalISOString()
+                fecha_hora: formatLocalISO()
             });
             setEditMode(false);
         } catch (error) {
@@ -75,7 +73,7 @@ const ExerciseLog: React.FC = () => {
                 duration_minutes: response.data.duration_minutes,
                 intensity: response.data.intensity,
                 calories_burned: response.data.calories_burned,
-                fecha_hora: getLocalISOString()
+                fecha_hora: formatLocalISO()
             });
             setEditMode(false);
         } catch (error) {
@@ -91,13 +89,17 @@ const ExerciseLog: React.FC = () => {
 
         setIsSaving(true);
         try {
+            const dataToSave = {
+                ...estimatedExercise,
+                fecha_hora: normalizeToBackendISO(estimatedExercise.fecha_hora || '')
+            };
             if (estimatedExercise.id) {
                 // Update existing record
-                const response = await api.put(`/exercise/${estimatedExercise.id}`, estimatedExercise);
+                const response = await api.put(`/exercise/${estimatedExercise.id}`, dataToSave);
                 updateExerciseLog(estimatedExercise.id, response.data);
             } else {
                 // Create new record
-                const response = await api.post('/exercise', estimatedExercise);
+                const response = await api.post('/exercise', dataToSave);
                 addExerciseLog(response.data);
             }
 
@@ -362,9 +364,17 @@ const ExerciseLog: React.FC = () => {
                                                 <Dumbbell className="w-5 h-5 text-slate-400" />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-slate-900">{log.exercise_type}</h4>
+                                                <h4 className="font-bold text-slate-900">{log.exercise_type || 'Ejercicio'}</h4>
                                                 <p className="text-xs text-slate-500 capitalize">
-                                                    {log.duration_minutes} min • {log.intensity} • {log.fecha_hora && new Date(log.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {log.duration_minutes || 0} min • {log.intensity || 'media'} • {(() => {
+                                                        try {
+                                                            if (!log.fecha_hora) return 'Sin hora';
+                                                            return new Date(log.fecha_hora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                                        } catch (e) {
+                                                            console.error('Error parsing date for log:', log.id, e);
+                                                            return 'Error hora';
+                                                        }
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>

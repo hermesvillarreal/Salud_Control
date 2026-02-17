@@ -3,6 +3,7 @@ import { ArrowLeft, Send, Sparkles, Save, Edit2, Check, Utensils, PieChart, Penc
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, FoodRecord, MealType } from '../stores/healthStore';
+import { formatLocalISO, normalizeToBackendISO } from '../utils/dateUtils';
 
 const FoodLog: React.FC = () => {
     const navigate = useNavigate();
@@ -33,14 +34,6 @@ const FoodLog: React.FC = () => {
             setPreviewUrl(null);
         }
     }, [selectedImage]);
-
-    // Helper to get local date in ISO format (YYYY-MM-DDTHH:mm)
-    const getLocalISOString = () => {
-        const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        const localDate = new Date(now.getTime() - offset);
-        return localDate.toISOString().slice(0, 16);
-    };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -81,7 +74,7 @@ const FoodLog: React.FC = () => {
                 meal_type: (['desayuno', 'merienda_manana', 'almuerzo', 'merienda_tarde', 'cena', 'merienda_postcena'].includes(response.data.meal_type?.toLowerCase())
                     ? response.data.meal_type.toLowerCase()
                     : 'almuerzo'),
-                fecha_hora: getLocalISOString()
+                fecha_hora: formatLocalISO()
             });
             setEditMode(false);
             // Clear image after analysis if desired, or keep it? Let's clear to show we processed it.
@@ -101,13 +94,17 @@ const FoodLog: React.FC = () => {
 
         setIsSaving(true);
         try {
+            const dataToSave = {
+                ...estimatedFood,
+                fecha_hora: normalizeToBackendISO(estimatedFood.fecha_hora || '')
+            };
             if (estimatedFood.id) {
                 // Update existing record
-                const response = await api.put(`/food/${estimatedFood.id}`, estimatedFood);
+                const response = await api.put(`/food/${estimatedFood.id}`, dataToSave);
                 updateFoodLog(estimatedFood.id, response.data);
             } else {
                 // Create new record
-                const response = await api.post('/food/log', estimatedFood);
+                const response = await api.post('/food/log', dataToSave);
                 addFoodLog(response.data);
             }
 

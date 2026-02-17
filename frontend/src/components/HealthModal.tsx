@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Save, Scale, Activity, Droplets } from 'lucide-react';
 import api from '../services/api';
 import { useHealthStore } from '../stores/healthStore';
+import { formatLocalISO, normalizeToBackendISO } from '../utils/dateUtils';
 
 interface HealthModalProps {
     isOpen: boolean;
@@ -20,8 +21,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
     const [glucose, setGlucose] = useState('');
     const [measurementType, setMeasurementType] = useState('ayuno');
     const [notes, setNotes] = useState('');
-    const [fechaHora, setFechaHora] = useState(new Date().toISOString().slice(0, 16));
-    Dragon:
+    const [fechaHora, setFechaHora] = useState(formatLocalISO());
 
     if (!isOpen) return null;
 
@@ -42,7 +42,8 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
         setIsSaving(true);
 
         try {
-            let data: any = { notes, fecha_hora: new Date(fechaHora).toISOString() };
+            const normalizedFechaHora = normalizeToBackendISO(fechaHora);
+            let data: any = { notes, fecha_hora: normalizedFechaHora };
             let metric_type = '';
 
             if (type === 'peso') {
@@ -64,7 +65,7 @@ const HealthModal: React.FC<HealthModalProps> = ({ isOpen, onClose, type }) => {
                 type,
                 value: type === 'presion' ? data.systolic : (type === 'peso' ? data.weight : data.glucose_level),
                 unit: type === 'peso' ? 'kg' : (type === 'presion' ? 'mmHg' : 'mg/dL'),
-                timestamp: data.fecha_hora
+                timestamp: normalizedFechaHora
             });
 
             onClose();

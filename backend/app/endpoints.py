@@ -8,7 +8,8 @@ from datetime import datetime
 from app.database import get_session
 from app.models import (
     User, UserCreate, WeightRecord, BloodPressureRecord, GlucoseRecord, 
-    FoodRecord, ExerciseRecord, ClinicalDocument, UserRole, MealType
+    FoodRecord, ExerciseRecord, ClinicalDocument, UserRole, MealType,
+    CalculatorResult
 )
 from app.auth.hash_utils import get_password_hash, verify_password
 from app.auth.jwt_utils import create_access_token
@@ -17,6 +18,8 @@ from app.services.ai_service import (
     analyze_food_text, analyze_food_image, analyze_health_summary,
     analyze_exercise_text, analyze_exercise_image
 )
+from app.services import calculator_service
+import json
 
 router = APIRouter()
 
@@ -316,3 +319,179 @@ async def get_health_analysis(
         },
         "ai_summary": ai_verdict
     }
+
+# --- HEALTH CALCULATORS ---
+
+@router.post("/calculators/tdee")
+def calculate_tdee_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate TDEE and save result"""
+    result = calculator_service.calculate_tdee(
+        age=data["age"],
+        gender=data["gender"],
+        weight_kg=data["weight_kg"],
+        height_cm=data["height_cm"],
+        activity_level=data["activity_level"]
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="tdee",
+        fecha_hora=data.get("fecha_hora"),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/macro")
+def calculate_macro_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate macros and save result"""
+    result = calculator_service.calculate_macros(
+        tdee=data["tdee"],
+        goal=data["goal"],
+        weight_kg=data["weight_kg"],
+        protein_preference=data.get("protein_preference", "moderate")
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="macro",
+        fecha_hora=data.get("fecha_hora"),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/bmi")
+def calculate_bmi_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate BMI and save result"""
+    result = calculator_service.calculate_bmi(
+        weight_kg=data["weight_kg"],
+        height_cm=data["height_cm"]
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="bmi",
+        fecha_hora=data.get("fecha_hora"),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/ascvd")
+def calculate_ascvd_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate ASCVD risk and save result"""
+    result = calculator_service.calculate_ascvd_risk(
+        age=data["age"],
+        gender=data["gender"],
+        race=data["race"],
+        total_cholesterol=data["total_cholesterol"],
+        hdl_cholesterol=data["hdl_cholesterol"],
+        systolic_bp=data["systolic_bp"],
+        is_diabetic=data["is_diabetic"],
+        is_smoker=data["is_smoker"],
+        on_bp_medication=data["on_bp_medication"]
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="ascvd",
+        fecha_hora=data.get("fecha_hora"),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.get("/calculators/history")
+def get_calculator_history(
+    calculator_type: Optional[str] = None,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get calculator history, optionally filtered by type"""
+    query = select(CalculatorResult).where(CalculatorResult.user_id == user.id)
+    
+    if calculator_type:
+        query = query.where(CalculatorResult.calculator_type == calculator_type)
+    
+    query = query.order_by(CalculatorResult.fecha_hora.desc())
+    records = session.exec(query).all()
+    
+    # Parse JSON data for response
+    history = []
+    for record in records:
+        history.append({
+            "id": record.id,
+            "calculator_type": record.calculator_type,
+            "fecha_hora": record.fecha_hora.isoformat(),
+            "input_data": json.loads(record.input_data),
+            "result_data": json.loads(record.result_data),
+            "notes": record.notes
+        })
+    
+    return history
+
+@router.get("/calculators/history/{id}")
+def get_calculator_result(
+    id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Get specific calculator result"""
+    record = session.get(CalculatorResult, id)
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Calculator result not found")
+    
+    if record.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this result")
+    
+    return {
+        "id": record.id,
+        "calculator_type": record.calculator_type,
+        "fecha_hora": record.fecha_hora.isoformat(),
+        "input_data": json.loads(record.input_data),
+        "result_data": json.loads(record.result_data),
+        "notes": record.notes
+    }
+

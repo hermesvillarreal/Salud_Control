@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X, Dumbbell } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X, Dumbbell, Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
@@ -78,6 +78,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 >
                     <Droplets className="w-4 h-4" />
                     <span>Glucosa</span>
+                </button>
+                <button
+                    onClick={() => navigate('/calculators')}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
+                    <Calculator className="w-4 h-4" />
+                    <span>Calculadoras</span>
                 </button>
                 {isTelegramLinked ? (
                     <button

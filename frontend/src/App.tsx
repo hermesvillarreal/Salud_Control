@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
 import ExerciseLog from './pages/ExerciseLog';
 import ClinicalDocs from './pages/ClinicalDocs';
+import Calculators from './pages/Calculators';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -21,6 +22,7 @@ function App() {
                     <Route path="/food-log" element={<FoodLog />} />
                     <Route path="/exercise-log" element={<ExerciseLog />} />
                     <Route path="/documents" element={<ClinicalDocs />} />
+                    <Route path="/calculators" element={<Calculators />} />
                 </Route>
 
                 {/* Redirección por defecto */}

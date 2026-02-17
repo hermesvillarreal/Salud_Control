@@ -126,13 +126,18 @@ async def analyze_food_image(image_bytes: bytes, mime_type: str, description: st
             result['meal_type'] = sanitize_meal_type(result['meal_type'])
         return result
     except Exception as e:
-        print(f"Error in analyze_food_image: {e}")
+        error_msg = str(e)
+        print(f"Error in analyze_food_image: {error_msg}")
+        
+        if "429" in error_msg or "Resource exhausted" in error_msg:
+            return {"error": "Límite de cuota de IA excedido. Por favor intenta más tarde."}
+            
         return {
             "calories": 0,
             "protein": 0.0,
             "carbs": 0.0,
             "fat": 0.0,
-            "error": "Failed to analyze food image"
+            "error": "Error al analizar la imagen. Intenta de nuevo."
         }
 
 async def analyze_health_summary(user_history: Dict[str, Any]) -> str:

@@ -7,6 +7,23 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
     USER = "USER"
 
+class CalculatorType(str, Enum):
+    TDEE = "tdee"
+    MACRO = "macro"
+    BMI = "bmi"
+    ASCVD = "ascvd"
+
+class Gender(str, Enum):
+    MALE = "male"
+    FEMALE = "female"
+
+class ActivityLevel(str, Enum):
+    SEDENTARY = "sedentary"  # 1.2
+    LIGHT = "light"  # 1.375
+    MODERATE = "moderate"  # 1.55
+    VERY_ACTIVE = "very_active"  # 1.725
+    EXTRA_ACTIVE = "extra_active"  # 1.9
+
 class UserBase(SQLModel):
     username: str = Field(index=True, unique=True)
     email: str = Field(index=True, unique=True)
@@ -30,6 +47,7 @@ class User(UserBase, table=True):
     food_records: list["FoodRecord"] = Relationship(back_populates="user")
     exercise_records: list["ExerciseRecord"] = Relationship(back_populates="user")
     clinical_documents: list["ClinicalDocument"] = Relationship(back_populates="user")
+    calculator_results: list["CalculatorResult"] = Relationship(back_populates="user")
 
 class WeightRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -115,3 +133,19 @@ class ClinicalDocument(SQLModel, table=True):
     notes: Optional[str] = None
 
     user: User = Relationship(back_populates="clinical_documents")
+
+class CalculatorResult(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    calculator_type: CalculatorType = Field(sa_type=AutoString)
+    fecha_hora: datetime
+    
+    # Input parameters (stored as JSON for flexibility)
+    input_data: str  # JSON string of inputs
+    
+    # Output results (stored as JSON for flexibility)
+    result_data: str  # JSON string of results
+    
+    notes: Optional[str] = None
+    
+    user: User = Relationship(back_populates="calculator_results")
