@@ -146,7 +146,17 @@ const Dashboard: React.FC = () => {
                     <GlucoseChart data={glucoseData} />
                     <PressureChart data={pressureData} />
                     <WeightChart data={weightData} />
-                    <NutrientsChart data={nutrientsData} totalCalories={totalCalories} />
+                    <NutrientsChart
+                        data={nutrientsData}
+                        totalCalories={totalCalories}
+                        goals={{
+                            calories: user?.daily_calories_goal,
+                            protein: user?.daily_protein_goal,
+                            carbs: user?.daily_carbs_goal,
+                            fat: user?.daily_fat_goal,
+                            current_goal: user?.current_goal
+                        }}
+                    />
                 </div>
             </div>
 

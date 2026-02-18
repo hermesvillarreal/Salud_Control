@@ -63,6 +63,27 @@ export default function MacroCalculator({ onSaved }: Props) {
         }
     };
 
+    const handleSaveGoals = async () => {
+        if (!result) return;
+
+        // Find label for active goal
+        const activeGoalLabel = goals.find(g => g.value === goal)?.label || goal;
+
+        try {
+            await api.patch('/auth/me', {
+                daily_calories_goal: result.calories,
+                daily_protein_goal: result.protein_g,
+                daily_carbs_goal: result.carbs_g,
+                daily_fat_goal: result.fat_g,
+                current_goal: activeGoalLabel
+            });
+            alert('Objetivos nutricionales actualizados en tu perfil');
+        } catch (error) {
+            console.error('Error saving goals:', error);
+            alert('Error al guardar objetivos');
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -217,6 +238,14 @@ export default function MacroCalculator({ onSaved }: Props) {
                                 <strong>💡 Consejo:</strong> Distribuye estos macros en 3-5 comidas al día.
                                 Ajusta según tu respuesta y preferencias personales.
                             </div>
+
+                            <button
+                                onClick={handleSaveGoals}
+                                className="w-full mt-4 bg-teal-600 text-white py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm flex justify-center items-center gap-2"
+                            >
+                                <span>🎯</span>
+                                <span>Establecer como Objetivo Diario</span>
+                            </button>
                         </div>
                     </div>
                 )}

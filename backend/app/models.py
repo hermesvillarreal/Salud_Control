@@ -29,6 +29,12 @@ class UserBase(SQLModel):
     email: str = Field(index=True, unique=True)
     full_name: Optional[str] = None
     role: UserRole = Field(default=UserRole.USER, sa_type=AutoString)
+    
+    # Nutritional Goals
+    daily_calories_goal: Optional[int] = None
+    daily_protein_goal: Optional[int] = None
+    daily_carbs_goal: Optional[int] = None
+    daily_fat_goal: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str
@@ -39,6 +45,13 @@ class User(UserBase, table=True):
     telegram_chat_id: Optional[int] = Field(default=None, index=True)
     telegram_auth_token: Optional[str] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=datetime.now)
+
+    # Nutritional Goals (Persisted)
+    daily_calories_goal: Optional[int] = None
+    daily_protein_goal: Optional[int] = None
+    daily_carbs_goal: Optional[int] = None
+    daily_fat_goal: Optional[int] = None
+    current_goal: Optional[str] = None
 
     # Relationships (Optional but good practice)
     weight_records: list["WeightRecord"] = Relationship(back_populates="user")

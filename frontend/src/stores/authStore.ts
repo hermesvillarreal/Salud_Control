@@ -7,6 +7,11 @@ interface User {
     name: string;
     role?: string;
     is_telegram_linked: boolean;
+    daily_calories_goal?: number;
+    daily_protein_goal?: number;
+    daily_carbs_goal?: number;
+    daily_fat_goal?: number;
+    current_goal?: string;
 }
 
 interface AuthState {

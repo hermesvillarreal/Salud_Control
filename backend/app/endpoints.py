@@ -82,7 +82,12 @@ def get_me(user: User = Depends(get_current_user)):
         "username": user.username,
         "email": user.email,
         "name": user.full_name or user.username,
-        "is_telegram_linked": user.telegram_chat_id is not None
+        "is_telegram_linked": user.telegram_chat_id is not None,
+        "daily_calories_goal": user.daily_calories_goal,
+        "daily_protein_goal": user.daily_protein_goal,
+        "daily_carbs_goal": user.daily_carbs_goal,
+        "daily_fat_goal": user.daily_fat_goal,
+        "current_goal": user.current_goal
     }
 
 @router.post("/auth/telegram-unlink")
@@ -100,6 +105,42 @@ def get_telegram_token(user: User = Depends(get_current_user), session: Session 
     session.add(user)
     session.commit()
     return {"token": token}
+
+@router.patch("/auth/me")
+def update_user_profile(
+    user_data: dict,
+    user: User = Depends(get_current_user), 
+    session: Session = Depends(get_session)
+):
+    """Update user profile, including nutritional goals"""
+    # Allowed fields to update
+    allowed_fields = [
+        "full_name", 
+        "daily_calories_goal", "daily_protein_goal", 
+        "daily_carbs_goal", "daily_fat_goal",
+        "current_goal"
+    ]
+    
+    for key, value in user_data.items():
+        if key in allowed_fields:
+            setattr(user, key, value)
+            
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    return {
+        "id": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "name": user.full_name or user.username,
+        "is_telegram_linked": user.telegram_chat_id is not None,
+        "daily_calories_goal": user.daily_calories_goal,
+        "daily_protein_goal": user.daily_protein_goal,
+        "daily_carbs_goal": user.daily_carbs_goal,
+        "daily_fat_goal": user.daily_fat_goal,
+        "current_goal": user.current_goal
+    }
 
 # --- HEALTH METRICS CRUD ---
 
