@@ -45,25 +45,25 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
                 <button
-                    onClick={onRegisterPeso}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
-                >
-                    <Scale className="w-4 h-4" />
-                    <span>Registrar Peso</span>
-                </button>
-                <button
                     onClick={() => navigate('/food-log')}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
                 >
                     <Utensils className="w-4 h-4" />
-                    <span>Registrar Comida</span>
+                    <span>Comida</span>
                 </button>
                 <button
                     onClick={() => navigate('/exercise-log')}
                     className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
                 >
                     <Dumbbell className="w-4 h-4" />
-                    <span>Registrar Ejercicio</span>
+                    <span>Ejercicio</span>
+                </button>
+                <button
+                    onClick={onRegisterGlucosa}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                >
+                    <Droplets className="w-4 h-4" />
+                    <span>Glucosa</span>
                 </button>
                 <button
                     onClick={onRegisterPresion}
@@ -73,11 +73,11 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     <span>Presión Arterial</span>
                 </button>
                 <button
-                    onClick={onRegisterGlucosa}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
+                    onClick={onRegisterPeso}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
                 >
-                    <Droplets className="w-4 h-4" />
-                    <span>Glucosa</span>
+                    <Scale className="w-4 h-4" />
+                    <span>Peso</span>
                 </button>
                 <button
                     onClick={() => navigate('/calculators')}

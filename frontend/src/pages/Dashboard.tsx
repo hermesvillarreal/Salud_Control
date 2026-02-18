@@ -113,13 +113,13 @@ const Dashboard: React.FC = () => {
                 {/* Tarjetas KPI */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <KpiCard
-                        title="Peso Actual"
-                        value={latestWeight.toString()}
-                        unit="kg"
-                        trend="down"
+                        title="Promedio Glucosa"
+                        value={latestGlucose.toString()}
+                        unit="mg/dL"
+                        trend="stable"
                         trendValue="--"
-                        icon={<Scale className="w-6 h-6" />}
-                        color="blue"
+                        icon={<Droplets className="w-6 h-6" />}
+                        color="purple"
                     />
                     <KpiCard
                         title="Última Presión"
@@ -131,21 +131,21 @@ const Dashboard: React.FC = () => {
                         color="red"
                     />
                     <KpiCard
-                        title="Promedio Glucosa"
-                        value={latestGlucose.toString()}
-                        unit="mg/dL"
-                        trend="stable"
+                        title="Peso Actual"
+                        value={latestWeight.toString()}
+                        unit="kg"
+                        trend="down"
                         trendValue="--"
-                        icon={<Droplets className="w-6 h-6" />}
-                        color="purple"
+                        icon={<Scale className="w-6 h-6" />}
+                        color="blue"
                     />
                 </div>
 
                 {/* Gráficos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <WeightChart data={weightData} />
-                    <PressureChart data={pressureData} />
                     <GlucoseChart data={glucoseData} />
+                    <PressureChart data={pressureData} />
+                    <WeightChart data={weightData} />
                     <NutrientsChart data={nutrientsData} totalCalories={totalCalories} />
                 </div>
             </div>
