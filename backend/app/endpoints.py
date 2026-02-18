@@ -249,8 +249,64 @@ def log_exercise(
     user: User = Depends(get_current_user), 
     session: Session = Depends(get_session)
 ):
-    record = ExerciseRecord(**data, user_id=user.id)
+    # Standard ExerciseRecord fields
+    record_data = {
+        "user_id": user.id,
+        "exercise_type": data.get("exercise_type"),
+        "duration_minutes": data.get("duration_minutes"),
+        "calories_burned": data.get("calories_burned"),
+        "intensity": data.get("intensity")
+    }
+    
+    # Handle custom date if provided
+    fecha_hora = data.get("fecha_hora")
+    if isinstance(fecha_hora, str):
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora)
+            record_data["fecha_hora"] = fecha_hora
+        except ValueError:
+            pass
+
+    record = ExerciseRecord(**record_data)
     session.add(record)
+    
+    # Dual Persistence: also save to CalculatorResult as "expenditure" if MET is provided
+    if "met" in data:
+        # We assume the data contains all necessary fields for the expenditure calculator
+        # weight_kg should come from user or data
+        weight_kg = data.get("user_weight_kg", user.weight_kg or 70.0)
+        
+        calc_input = {
+            "weight_kg": weight_kg,
+            "duration_min": data.get("duration_minutes"),
+            "activity_met": data.get("met"),
+            "rpe": data.get("rpe"),
+            "exercise_type": data.get("exercise_type")
+        }
+        
+        calc_result = {
+            "calories_burned": data.get("calories_burned"),
+            "weight_kg": weight_kg,
+            "duration_min": data.get("duration_minutes"),
+            "met": data.get("met"),
+            "rpe": data.get("rpe")
+        }
+        # Add enriched data if available
+        if "resting_kcal_total" in data:
+            calc_result["resting_kcal_total"] = data["resting_kcal_total"]
+        if "ratio_to_resting" in data:
+            calc_result["ratio_to_resting"] = data["ratio_to_resting"]
+
+        calc_record = CalculatorResult(
+            user_id=user.id,
+            calculator_type="expenditure",
+            fecha_hora=fecha_hora or datetime.now(),
+            input_data=json.dumps(calc_input),
+            result_data=json.dumps(calc_result),
+            notes=f"Registrado automáticamente desde log de ejercicio: {data.get('exercise_type')}"
+        )
+        session.add(calc_record)
+
     session.commit()
     session.refresh(record)
     return record
@@ -259,6 +315,21 @@ def log_exercise(
 @router.post("/exercise/analyze")
 async def analyze_exercise(description: str, user: User = Depends(get_current_user)):
     exercise_data = await analyze_exercise_text(description)
+    
+    # Enrich with user weight and calculator logic if weight is available
+    if user.weight_kg and "error" not in exercise_data:
+        calc_result = calculator_service.calculate_caloric_expenditure(
+            weight_kg=user.weight_kg,
+            duration_min=exercise_data.get("duration_minutes", 0),
+            activity_met=exercise_data.get("met", 3.0),
+            rpe=exercise_data.get("rpe")
+        )
+        # Prioritize calculator service result for calories
+        exercise_data["calories_burned"] = int(calc_result["calories_burned"])
+        exercise_data["user_weight_kg"] = user.weight_kg
+        exercise_data["resting_kcal_total"] = calc_result["resting_kcal_total"]
+        exercise_data["ratio_to_resting"] = calc_result["ratio_to_resting"]
+        
     return exercise_data
 
 @router.post("/exercise/analyze-image")
@@ -269,6 +340,21 @@ async def analyze_exercise_img(
 ):
     image_bytes = await file.read()
     exercise_data = await analyze_exercise_image(image_bytes, file.content_type, description or "")
+    
+    # Enrich with user weight and calculator logic if weight is available
+    if user.weight_kg and "error" not in exercise_data:
+        calc_result = calculator_service.calculate_caloric_expenditure(
+            weight_kg=user.weight_kg,
+            duration_min=exercise_data.get("duration_minutes", 0),
+            activity_met=exercise_data.get("met", 3.0),
+            rpe=exercise_data.get("rpe")
+        )
+        # Prioritize calculator service result for calories
+        exercise_data["calories_burned"] = int(calc_result["calories_burned"])
+        exercise_data["user_weight_kg"] = user.weight_kg
+        exercise_data["resting_kcal_total"] = calc_result["resting_kcal_total"]
+        exercise_data["ratio_to_resting"] = calc_result["ratio_to_resting"]
+        
     return exercise_data
 
 @router.get("/exercise", response_model=List[ExerciseRecord])

@@ -24,6 +24,8 @@ export interface ExerciseRecord {
     duration_minutes: number;
     calories_burned?: number;
     intensity: 'baja' | 'media' | 'alta';
+    met?: number;
+    rpe?: number;
 }
 
 export interface WaistHipRecord {

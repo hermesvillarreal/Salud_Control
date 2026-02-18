@@ -180,6 +180,8 @@ async def analyze_exercise_text(description: str) -> Dict[str, Any]:
     - exercise_type (string, corto y descriptivo en español, ej: 'Caminata', 'Running', 'Gimnasio')
     - duration_minutes (entero)
     - intensity (string, debe ser uno de: baja, media, alta)
+    - met (float, Valor MET estimado según el Compendio de Actividades Físicas de Ainsworth)
+    - rpe (entero de 1 a 10, Escala de Esfuerzo Percibido interpretada del texto)
     - calories_burned (entero, estimación basada en el tipo, duración e intensidad)
 
     Si no puedes determinar la duración, intenta dar una estimación lógica o usa 30 como valor por defecto.
@@ -201,6 +203,8 @@ async def analyze_exercise_text(description: str) -> Dict[str, Any]:
             "exercise_type": "Desconocido",
             "duration_minutes": 0,
             "intensity": "media",
+            "met": 1.0,
+            "rpe": 5,
             "calories_burned": 0,
             "error": "Failed to analyze exercise"
         }
@@ -222,6 +226,8 @@ async def analyze_exercise_image(image_bytes: bytes, mime_type: str, description
     - exercise_type (string, corto y descriptivo en español, ej: 'Running', 'Gimnasio', 'Ciclismo')
     - duration_minutes (entero, estima basado en la imagen o descripción)
     - intensity (string, debe ser uno de: baja, media, alta)
+    - met (float, Valor MET estimado según el Compendio de Actividades Físicas de Ainsworth)
+    - rpe (entero de 1 a 10, Escala de Esfuerzo Percibido interpretada del texto o imagen)
     - calories_burned (entero, estimación basada en el tipo, duración e intensidad)
 
     Si no puedes determinar los valores o no hay ejercicio en la imagen, responde con un objeto JSON con error.
@@ -248,6 +254,8 @@ async def analyze_exercise_image(image_bytes: bytes, mime_type: str, description
             "exercise_type": "Desconocido",
             "duration_minutes": 0,
             "intensity": "media",
+            "met": 1.0,
+            "rpe": 5,
             "calories_burned": 0,
             "error": "Failed to analyze exercise image"
         }

@@ -158,7 +158,16 @@ export default function CaloricExpenditureCalculator({ onSaved }: Props) {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Percepción de Esfuerzo (RPE 1-10)</label>
+                            <div className="flex items-center gap-1 mb-1">
+                                <label className="block text-sm font-medium text-gray-700">Percepción de Esfuerzo (RPE 1-10)</label>
+                                <div className="group relative">
+                                    <Info size={14} className="text-gray-400 cursor-help" />
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                        Escala de Esfuerzo Percibido. 1=Muy suave, 10=Esfuerzo máximo. Indica cómo sientes la intensidad.
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                                    </div>
+                                </div>
+                            </div>
                             <input
                                 type="range"
                                 min="1"

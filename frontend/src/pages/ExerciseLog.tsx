@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, Pencil } from 'lucide-react';
+import { ArrowLeft, Sparkles, Save, Edit2, Check, Dumbbell, Activity, Camera, Pencil, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, ExerciseRecord } from '../stores/healthStore';
@@ -17,7 +17,7 @@ const ExerciseLog: React.FC = () => {
     const recalcDescRef = useRef<HTMLTextAreaElement>(null);
 
     // Confirmation/Edit state
-    const [estimatedExercise, setEstimatedExercise] = useState<Partial<ExerciseRecord> | null>(null);
+    const [estimatedExercise, setEstimatedExercise] = useState<any | null>(null);
     const [editMode, setEditMode] = useState(false);
 
     useEffect(() => {
@@ -39,10 +39,7 @@ const ExerciseLog: React.FC = () => {
             });
 
             setEstimatedExercise({
-                exercise_type: response.data.exercise_type,
-                duration_minutes: response.data.duration_minutes,
-                intensity: response.data.intensity,
-                calories_burned: response.data.calories_burned,
+                ...response.data,
                 fecha_hora: formatLocalISO()
             });
             setEditMode(false);
@@ -69,10 +66,7 @@ const ExerciseLog: React.FC = () => {
             });
 
             setEstimatedExercise({
-                exercise_type: response.data.exercise_type,
-                duration_minutes: response.data.duration_minutes,
-                intensity: response.data.intensity,
-                calories_burned: response.data.calories_burned,
+                ...response.data,
                 fecha_hora: formatLocalISO()
             });
             setEditMode(false);
@@ -269,7 +263,7 @@ const ExerciseLog: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                         <ExerciseField
                                             label="Duración"
                                             value={estimatedExercise.duration_minutes}
@@ -300,7 +294,37 @@ const ExerciseLog: React.FC = () => {
                                                 <span className="text-lg font-bold text-slate-900 capitalize">{estimatedExercise.intensity}</span>
                                             )}
                                         </div>
+                                        <ExerciseField
+                                            label="MET Estimado"
+                                            value={estimatedExercise.met}
+                                            unit="METs"
+                                            tooltip="Metabolic Equivalent of Task. 1=Reposo, 3-5=Moderado, 8+=Intenso. Es la intensidad relativa de la actividad."
+                                            edit={editMode}
+                                            onChange={(val) => handleEditChange('met', parseFloat(val))}
+                                        />
+                                        {editMode && (
+                                            <ExerciseField
+                                                label="RPE (1-10)"
+                                                value={estimatedExercise.rpe}
+                                                unit=""
+                                                tooltip="Escala de Esfuerzo Percibido. 1=Muy suave, 10=Esfuerzo máximo. Indica cómo sentiste la intensidad del ejercicio."
+                                                edit={editMode}
+                                                onChange={(val) => handleEditChange('rpe', parseInt(val))}
+                                            />
+                                        )}
                                     </div>
+
+                                    {!editMode && estimatedExercise.ratio_to_resting && (
+                                        <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100 flex items-center gap-3">
+                                            <div className="bg-white p-2 rounded-lg shadow-sm">🚀</div>
+                                            <div className="text-sm">
+                                                <p className="text-slate-600">
+                                                    Este ejercicio equivale a <span className="font-bold text-orange-600">{estimatedExercise.ratio_to_resting.toFixed(1)} veces</span> tu gasto en reposo.
+                                                    Usa un <span className="font-bold">MET de {estimatedExercise.met}</span> y un <span className="font-bold">RPE de {estimatedExercise.rpe}</span>.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {editMode && (
                                         <div className="mt-4 animate-in fade-in duration-300">
@@ -416,12 +440,24 @@ interface ExerciseFieldProps {
     value?: number;
     unit: string;
     edit?: boolean;
+    tooltip?: string;
     onChange?: (val: string) => void;
 }
 
-const ExerciseField: React.FC<ExerciseFieldProps> = ({ label, value, unit, edit, onChange }) => (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-        <p className="text-xs text-slate-400 mb-1">{label}</p>
+const ExerciseField: React.FC<ExerciseFieldProps> = ({ label, value, unit, edit, tooltip, onChange }) => (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 group relative">
+        <div className="flex items-center gap-1 mb-1">
+            <p className="text-xs text-slate-400">{label}</p>
+            {tooltip && (
+                <div className="relative group/tooltip">
+                    <Info size={12} className="text-slate-300 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded shadow-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-50">
+                        {tooltip}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                    </div>
+                </div>
+            )}
+        </div>
         <div className="flex items-baseline gap-1">
             {edit ? (
                 <input
