@@ -70,13 +70,13 @@ const NutrientsChart: React.FC<NutrientsChartProps> = ({ data, totalCalories, go
                 <div className="flex flex-col">
                     <span className="text-xs font-medium text-slate-500">Proteína</span>
                     {/* Looking for "Proteína" or "Protein" */}
-                    <span className="font-bold text-slate-800" style={{ color: '#3b82f6' }}>{Math.round(getValue('ote'))}g</span>
+                    <span className="font-bold text-slate-800" style={{ color: '#22c55e' }}>{Math.round(getValue('ote'))}g</span>
                     {goals?.protein && <span className="text-xs text-slate-400">/ {goals.protein}g</span>}
                 </div>
                 <div className="flex flex-col">
                     <span className="text-xs font-medium text-slate-500">Carbos</span>
                     {/* Looking for "Carbohidratos" or "Carbs" */}
-                    <span className="font-bold text-slate-800" style={{ color: '#22c55e' }}>{Math.round(getValue('arb'))}g</span>
+                    <span className="font-bold text-slate-800" style={{ color: '#ef4444' }}>{Math.round(getValue('arb'))}g</span>
                     {goals?.carbs && <span className="text-xs text-slate-400">/ {goals.carbs}g</span>}
                 </div>
                 <div className="flex flex-col">

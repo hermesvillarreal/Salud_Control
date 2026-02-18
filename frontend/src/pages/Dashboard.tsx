@@ -87,8 +87,8 @@ const Dashboard: React.FC = () => {
     const todaysFood = foodLogs.filter(f => f.fecha_hora?.startsWith(today));
 
     const nutrientsData = [
-        { name: 'Proteína', value: todaysFood.reduce((acc, f) => acc + (f.protein || 0), 0), color: '#3b82f6' },
-        { name: 'Carbos', value: todaysFood.reduce((acc, f) => acc + (f.carbs || 0), 0), color: '#22c55e' },
+        { name: 'Proteína', value: todaysFood.reduce((acc, f) => acc + (f.protein || 0), 0), color: '#22c55e' },
+        { name: 'Carbos', value: todaysFood.reduce((acc, f) => acc + (f.carbs || 0), 0), color: '#ef4444' },
         { name: 'Grasas', value: todaysFood.reduce((acc, f) => acc + (f.fat || 0), 0), color: '#f59e0b' },
     ];
 
