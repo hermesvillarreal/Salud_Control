@@ -14,6 +14,7 @@ class CalculatorType(str, Enum):
     ASCVD = "ascvd"
     RCC = "rcc"
     WEIGHTS = "weights"
+    EXPENDITURE = "expenditure"
 
 class Gender(str, Enum):
     MALE = "male"

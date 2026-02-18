@@ -498,11 +498,21 @@ def calculate_rcc_endpoint(
         gender=data.get("gender", user.gender or "male")
     )
     
+    # Parse fecha_hora if it comes as a string
+    fecha_hora = data.get("fecha_hora")
+    if isinstance(fecha_hora, str):
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora)
+        except ValueError:
+            fecha_hora = datetime.now()
+    elif not fecha_hora:
+        fecha_hora = datetime.now()
+
     # Save to database
     calc_record = CalculatorResult(
         user_id=user.id,
         calculator_type="rcc",
-        fecha_hora=data.get("fecha_hora", datetime.now()),
+        fecha_hora=fecha_hora,
         input_data=json.dumps(data),
         result_data=json.dumps(result),
         notes=data.get("notes")
@@ -526,11 +536,60 @@ def calculate_weights_endpoint(
         intensity=data.get("intensity")
     )
     
+    # Parse fecha_hora if it comes as a string
+    fecha_hora = data.get("fecha_hora")
+    if isinstance(fecha_hora, str):
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora)
+        except ValueError:
+            fecha_hora = datetime.now()
+    elif not fecha_hora:
+        fecha_hora = datetime.now()
+
     # Save to database
     calc_record = CalculatorResult(
         user_id=user.id,
         calculator_type="weights",
-        fecha_hora=data.get("fecha_hora", datetime.now()),
+        fecha_hora=fecha_hora,
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/expenditure")
+def calculate_expenditure_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate Caloric Expenditure and save result"""
+    result = calculator_service.calculate_caloric_expenditure(
+        weight_kg=data["weight_kg"],
+        duration_min=data["duration_min"],
+        activity_met=data["activity_met"],
+        rpe=data.get("rpe")
+    )
+    
+    # Parse fecha_hora if it comes as a string
+    fecha_hora = data.get("fecha_hora")
+    if isinstance(fecha_hora, str):
+        try:
+            fecha_hora = datetime.fromisoformat(fecha_hora)
+        except ValueError:
+            fecha_hora = datetime.now()
+    elif not fecha_hora:
+        fecha_hora = datetime.now()
+
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="expenditure",
+        fecha_hora=fecha_hora,
         input_data=json.dumps(data),
         result_data=json.dumps(result),
         notes=data.get("notes")

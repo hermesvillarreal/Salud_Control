@@ -2,6 +2,7 @@ import { useState } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { Dumbbell, Info, Heart, Zap } from 'lucide-react';
+import { getLocalISOString } from '../../utils/dateUtils';
 
 interface Props {
     onSaved?: () => void;
@@ -33,7 +34,7 @@ export default function WeightsCalculator({ onSaved }: Props) {
                 weight_kg: parseFloat(weight),
                 time_min: parseInt(duration),
                 intensity: intensity || null, // null will trigger average fallback
-                fecha_hora: new Date().toISOString()
+                fecha_hora: getLocalISOString()
             });
 
             const intensityLabel = intensity === 'baja' ? 'Baja' :
@@ -103,8 +104,8 @@ export default function WeightsCalculator({ onSaved }: Props) {
                                     key={level}
                                     onClick={() => setIntensity(level)}
                                     className={`py-2 px-3 rounded-md border text-sm font-medium transition-all ${intensity === level
-                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
-                                            : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'
+                                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                                        : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-300'
                                         }`}
                                 >
                                     {level.charAt(0).toUpperCase() + level.slice(1)}

@@ -1,9 +1,8 @@
 // Helper function to get local date in ISO format for backend
 // Helper function to get local date in ISO format (YYYY-MM-DDTHH:mm:ss) for backend
-export const getLocalISOString = (): string => {
-    const now = new Date();
-    const offset = now.getTimezoneOffset() * 60000;
-    const localDate = new Date(now.getTime() - offset);
+export const getLocalISOString = (date: Date = new Date()): string => {
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
     return localDate.toISOString().slice(0, 19);
 };
 

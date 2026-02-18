@@ -405,3 +405,41 @@ def calculate_weights_expenditure(
         "intensity": intensity or "promedio",
         "factor": factor
     }
+
+def calculate_caloric_expenditure(
+    weight_kg: float,
+    duration_min: float,
+    activity_met: float,
+    rpe: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Calculate calories burned by physical activity
+    Formula: Kcal = 0.0175 * MET * Peso (kg) * Tiempo (min)
+    
+    Args:
+        weight_kg: Body weight in kg
+        duration_min: Duration in minutes
+        activity_met: MET value of the activity
+        rpe: Optional RPE (1-10) to adjust intensity (educational purposes)
+    """
+    # Base calculation
+    calories = 0.0175 * activity_met * weight_kg * duration_min
+    
+    # RPE adjustment (Optional, informational in this context but can tweak slightly)
+    # If RPE is very high (9-10), we consider the METs might be at the higher end of the range
+    # provided in the compendium, but for this implementation we use the provide MET directly.
+    
+    resting_kcal_min = 0.0175 * 1.0 * weight_kg  # 1 MET = resting
+    resting_kcal_total = resting_kcal_min * duration_min
+    
+    ratio_to_resting = calories / resting_kcal_total if resting_kcal_total > 0 else 0
+    
+    return {
+        "calories_burned": round(calories, 1),
+        "weight_kg": weight_kg,
+        "duration_min": duration_min,
+        "met": activity_met,
+        "resting_kcal_total": round(resting_kcal_total, 1),
+        "ratio_to_resting": round(ratio_to_resting, 1),
+        "rpe": rpe
+    }

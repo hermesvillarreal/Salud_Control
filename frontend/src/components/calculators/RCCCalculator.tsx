@@ -64,7 +64,7 @@ export default function RCCCalculator({ onSaved }: Props) {
                 waist_cm: waistVal,
                 hip_cm: hipVal,
                 rcc: parseFloat(rcc.toFixed(2)),
-                fecha_hora: date + "T" + new Date().toLocaleTimeString('en-GB'),
+                fecha_hora: getLocalISOString(new Date(date + "T" + new Date().toLocaleTimeString('en-GB'))),
                 notes: `Clasificación: ${classification}`
             });
 
@@ -73,7 +73,7 @@ export default function RCCCalculator({ onSaved }: Props) {
                 waist_cm: waistVal,
                 hip_cm: hipVal,
                 gender: user?.gender || 'male',
-                fecha_hora: date + "T" + new Date().toLocaleTimeString('en-GB'),
+                fecha_hora: getLocalISOString(new Date(date + "T" + new Date().toLocaleTimeString('en-GB'))),
                 notes: `Clasificación: ${classification}`
             });
 

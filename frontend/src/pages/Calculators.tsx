@@ -7,9 +7,10 @@ import BMICalculator from '../components/calculators/BMICalculator';
 import ASCVDCalculator from '../components/calculators/ASCVDCalculator';
 import RCCCalculator from '../components/calculators/RCCCalculator';
 import WeightsCalculator from '../components/calculators/WeightsCalculator';
+import CaloricExpenditureCalculator from '../components/calculators/CaloricExpenditureCalculator';
 import CalculatorHistory from '../components/calculators/CalculatorHistory';
 
-type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'rcc' | 'weights' | 'history';
+type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'rcc' | 'weights' | 'expenditure' | 'history';
 
 export default function Calculators() {
     const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function Calculators() {
         { id: 'bmi' as CalculatorTab, label: 'BMI', icon: '⚖️' },
         { id: 'rcc' as CalculatorTab, label: 'RCC', icon: '📏' },
         { id: 'weights' as CalculatorTab, label: 'Pesas', icon: '🏋️‍♂️' },
+        { id: 'expenditure' as CalculatorTab, label: 'Gasto Calórico', icon: '🔥' },
         { id: 'ascvd' as CalculatorTab, label: 'Riesgo Cardiovascular', icon: '❤️' },
         { id: 'history' as CalculatorTab, label: 'Historial', icon: '📊' },
     ];
@@ -74,6 +76,7 @@ export default function Calculators() {
                         {activeTab === 'bmi' && <BMICalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'rcc' && <RCCCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'weights' && <WeightsCalculator onSaved={handleCalculationSaved} />}
+                        {activeTab === 'expenditure' && <CaloricExpenditureCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'ascvd' && <ASCVDCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'history' && <CalculatorHistory key={refreshHistory} />}
                     </div>
