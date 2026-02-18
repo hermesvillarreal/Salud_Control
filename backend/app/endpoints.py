@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from typing import List, Optional
 import shutil
 import os
+import json
 from datetime import datetime
 
 from app.database import get_session
@@ -19,7 +20,6 @@ from app.services.ai_service import (
     analyze_exercise_text, analyze_exercise_image
 )
 from app.services import calculator_service
-import json
 
 router = APIRouter()
 
@@ -502,6 +502,34 @@ def calculate_rcc_endpoint(
     calc_record = CalculatorResult(
         user_id=user.id,
         calculator_type="rcc",
+        fecha_hora=data.get("fecha_hora", datetime.now()),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/weights")
+def calculate_weights_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate Weights expenditure and save result"""
+    result = calculator_service.calculate_weights_expenditure(
+        weight_kg=data["weight_kg"],
+        time_min=data["time_min"],
+        intensity=data.get("intensity")
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="weights",
         fecha_hora=data.get("fecha_hora", datetime.now()),
         input_data=json.dumps(data),
         result_data=json.dumps(result),

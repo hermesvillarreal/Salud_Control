@@ -3,7 +3,7 @@ Health Calculator Service
 Implements medical-grade formulas for TDEE, Macro, BMI, and ASCVD calculations
 """
 import math
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 def calculate_tdee(
     age: int,
@@ -367,4 +367,41 @@ def calculate_rcc(waist_cm: float, hip_cm: float, gender: str) -> Dict[str, Any]
         "rcc_healthy": rcc_healthy,
         "classification": classification,
         "gender": gender
+    }
+
+def calculate_weights_expenditure(
+    weight_kg: float,
+    time_min: int,
+    intensity: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Calculate calories burned during a weights session
+    Formula: Kcal = Peso * Tiempo * Factor
+    
+    Factors (kcal/kg/min) based on Ainsworth compendium:
+    - Baja (Low): 0.10 (Effectively more active time)
+    - Media (Moderate): 0.075
+    - Alta (High): 0.05 (More rest time between sets)
+    - Default/Fallback: 6 kcal/min average (approx factor 0.085 for 70kg)
+    """
+    factors = {
+        "baja": 0.10,
+        "media": 0.075,
+        "alta": 0.05
+    }
+    
+    if intensity and intensity.lower() in factors:
+        factor = factors[intensity.lower()]
+        calories = weight_kg * time_min * factor
+    else:
+        # Fallback to average 6 kcal/min
+        calories = 6 * time_min
+        factor = None
+
+    return {
+        "calories": round(calories, 1),
+        "weight_kg": weight_kg,
+        "time_min": time_min,
+        "intensity": intensity or "promedio",
+        "factor": factor
     }

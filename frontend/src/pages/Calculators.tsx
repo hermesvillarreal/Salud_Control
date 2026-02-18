@@ -6,13 +6,14 @@ import MacroCalculator from '../components/calculators/MacroCalculator';
 import BMICalculator from '../components/calculators/BMICalculator';
 import ASCVDCalculator from '../components/calculators/ASCVDCalculator';
 import RCCCalculator from '../components/calculators/RCCCalculator';
+import WeightsCalculator from '../components/calculators/WeightsCalculator';
 import CalculatorHistory from '../components/calculators/CalculatorHistory';
 
-type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'rcc' | 'history';
+type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'rcc' | 'weights' | 'history';
 
 export default function Calculators() {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<CalculatorTab>('tdee');
+    const [activeTab, setActiveTab] = useState<CalculatorTab>('rcc');
     const [refreshHistory, setRefreshHistory] = useState(0);
 
     const handleCalculationSaved = () => {
@@ -24,6 +25,7 @@ export default function Calculators() {
         { id: 'macro' as CalculatorTab, label: 'Macros', icon: '🍽️' },
         { id: 'bmi' as CalculatorTab, label: 'BMI', icon: '⚖️' },
         { id: 'rcc' as CalculatorTab, label: 'RCC', icon: '📏' },
+        { id: 'weights' as CalculatorTab, label: 'Pesas', icon: '🏋️‍♂️' },
         { id: 'ascvd' as CalculatorTab, label: 'Riesgo Cardiovascular', icon: '❤️' },
         { id: 'history' as CalculatorTab, label: 'Historial', icon: '📊' },
     ];
@@ -71,6 +73,7 @@ export default function Calculators() {
                         {activeTab === 'macro' && <MacroCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'bmi' && <BMICalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'rcc' && <RCCCalculator onSaved={handleCalculationSaved} />}
+                        {activeTab === 'weights' && <WeightsCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'ascvd' && <ASCVDCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'history' && <CalculatorHistory key={refreshHistory} />}
                     </div>

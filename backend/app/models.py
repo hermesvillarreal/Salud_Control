@@ -13,6 +13,7 @@ class CalculatorType(str, Enum):
     BMI = "bmi"
     ASCVD = "ascvd"
     RCC = "rcc"
+    WEIGHTS = "weights"
 
 class Gender(str, Enum):
     MALE = "male"

@@ -39,6 +39,8 @@ export default function CalculatorHistory() {
             macro: 'Macros',
             bmi: 'IMC',
             ascvd: 'Riesgo Cardiovascular',
+            rcc: 'RCC',
+            weights: 'Pesas',
         };
         return labels[type] || type;
     };
@@ -49,6 +51,8 @@ export default function CalculatorHistory() {
             macro: '🍽️',
             bmi: '⚖️',
             ascvd: '❤️',
+            rcc: '📏',
+            weights: '🏋️‍♂️',
         };
         return icons[type] || '📊';
     };
@@ -74,6 +78,10 @@ export default function CalculatorHistory() {
                 return `IMC: ${result.bmi} (${result.category})`;
             case 'ascvd':
                 return `Riesgo: ${result.risk_percentage}% (${result.risk_category})`;
+            case 'rcc':
+                return `RCC: ${result.rcc} (${result.classification})`;
+            case 'weights':
+                return `Gasto: ${result.calories} kcal (${result.intensity})`;
             default:
                 return 'Ver detalles';
         }
@@ -96,6 +104,8 @@ export default function CalculatorHistory() {
                     <option value="tdee">TDEE</option>
                     <option value="macro">Macros</option>
                     <option value="bmi">IMC</option>
+                    <option value="rcc">RCC</option>
+                    <option value="weights">Pesas</option>
                     <option value="ascvd">Riesgo Cardiovascular</option>
                 </select>
             </div>
