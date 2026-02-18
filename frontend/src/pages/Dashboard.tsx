@@ -110,42 +110,8 @@ const Dashboard: React.FC = () => {
                     onUnlinkTelegram={handleUnlinkTelegram}
                 />
 
-                {/* Tarjetas KPI */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <KpiCard
-                        title="Promedio Glucosa"
-                        value={latestGlucose.toString()}
-                        unit="mg/dL"
-                        trend="stable"
-                        trendValue="--"
-                        icon={<Droplets className="w-6 h-6" />}
-                        color="purple"
-                    />
-                    <KpiCard
-                        title="Última Presión"
-                        value={latestBP.toString()}
-                        unit="mmHg"
-                        trend="stable"
-                        trendValue="--"
-                        icon={<Activity className="w-6 h-6" />}
-                        color="red"
-                    />
-                    <KpiCard
-                        title="Peso Actual"
-                        value={latestWeight.toString()}
-                        unit="kg"
-                        trend="down"
-                        trendValue="--"
-                        icon={<Scale className="w-6 h-6" />}
-                        color="blue"
-                    />
-                </div>
-
-                {/* Gráficos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <GlucoseChart data={glucoseData} />
-                    <PressureChart data={pressureData} />
-                    <WeightChart data={weightData} />
+                {/* 1. Macronutrientes (Top) */}
+                <div className="mb-8">
                     <NutrientsChart
                         data={nutrientsData}
                         totalCalories={totalCalories}
@@ -157,6 +123,78 @@ const Dashboard: React.FC = () => {
                             current_goal: user?.current_goal
                         }}
                     />
+                </div>
+
+                {/* 2. Glucosa Section */}
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Droplets className="w-5 h-5 text-purple-600" />
+                        Glucosa
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1">
+                            <KpiCard
+                                title="Glucosa Actual"
+                                value={latestGlucose.toString()}
+                                unit="mg/dL"
+                                trend="stable"
+                                trendValue="--"
+                                icon={<Droplets className="w-6 h-6" />}
+                                color="purple"
+                            />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <GlucoseChart data={glucoseData} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Presión Section */}
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-red-600" />
+                        Presión Arterial
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1">
+                            <KpiCard
+                                title="Presión Actual"
+                                value={latestBP.toString()}
+                                unit="mmHg"
+                                trend="stable"
+                                trendValue="--"
+                                icon={<Activity className="w-6 h-6" />}
+                                color="red"
+                            />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <PressureChart data={pressureData} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Peso Section */}
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Scale className="w-5 h-5 text-blue-600" />
+                        Control de Peso
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1">
+                            <KpiCard
+                                title="Peso Actual"
+                                value={latestWeight.toString()}
+                                unit="kg"
+                                trend="down"
+                                trendValue="--"
+                                icon={<Scale className="w-6 h-6" />}
+                                color="blue"
+                            />
+                        </div>
+                        <div className="lg:col-span-2">
+                            <WeightChart data={weightData} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
