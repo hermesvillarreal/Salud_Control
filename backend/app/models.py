@@ -53,6 +53,13 @@ class User(UserBase, table=True):
     daily_fat_goal: Optional[int] = None
     current_goal: Optional[str] = None
 
+    # Biometric Data (Persisted)
+    age: Optional[int] = None
+    gender: Optional[Gender] = None
+    height_cm: Optional[float] = None
+    weight_kg: Optional[float] = None
+    activity_level: Optional[ActivityLevel] = None
+
     # Relationships (Optional but good practice)
     weight_records: list["WeightRecord"] = Relationship(back_populates="user")
     bp_records: list["BloodPressureRecord"] = Relationship(back_populates="user")

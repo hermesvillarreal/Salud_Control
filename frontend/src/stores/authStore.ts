@@ -12,6 +12,11 @@ interface User {
     daily_carbs_goal?: number;
     daily_fat_goal?: number;
     current_goal?: string;
+    age?: number;
+    gender?: 'male' | 'female';
+    height_cm?: number;
+    weight_kg?: number;
+    activity_level?: string;
 }
 
 interface AuthState {

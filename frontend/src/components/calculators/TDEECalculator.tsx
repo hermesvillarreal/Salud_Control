@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../../services/api';
 import { getLocalISOString } from '../../utils/dateUtils';
+import { useAuthStore } from '../../stores/authStore';
 
 interface TDEEResult {
     bmr: number;
@@ -56,6 +57,45 @@ export default function TDEECalculator({ onSaved }: Props) {
             setLoading(false);
         }
     };
+
+    const handleSaveToProfile = async () => {
+        if (!result) return;
+        try {
+            await api.patch('/auth/me', {
+                age: parseInt(age),
+                gender,
+                weight_kg: parseFloat(weight),
+                height_cm: parseFloat(height),
+                activity_level: activityLevel
+            });
+
+            // Update local store to reflect changes
+            useAuthStore.getState().updateUser({
+                age: parseInt(age),
+                gender: gender as 'male' | 'female',
+                weight_kg: parseFloat(weight),
+                height_cm: parseFloat(height),
+                activity_level: activityLevel
+            });
+
+            alert('Datos biométricos actualizados en tu perfil');
+        } catch (error) {
+            console.error('Error saving biometrics:', error);
+            alert('Error al guardar datos biométricos');
+        }
+    };
+
+    // Pre-fill from profile
+    useState(() => {
+        const user = useAuthStore.getState().user;
+        if (user) {
+            if (user.age) setAge(user.age.toString());
+            if (user.gender) setGender(user.gender);
+            if (user.weight_kg) setWeight(user.weight_kg.toString());
+            if (user.height_cm) setHeight(user.height_cm.toString());
+            if (user.activity_level) setActivityLevel(user.activity_level);
+        }
+    });
 
     return (
         <div className="space-y-6">
@@ -189,6 +229,14 @@ export default function TDEECalculator({ onSaved }: Props) {
                                 <strong>💡 Nota:</strong> Tu TDEE se calculó usando el factor de actividad {result.activity_factor}.
                                 Ajusta según tus objetivos y monitorea tu progreso.
                             </div>
+
+                            <button
+                                onClick={handleSaveToProfile}
+                                className="w-full mt-4 bg-teal-600 text-white py-3 rounded-lg font-medium hover:bg-teal-700 transition-colors shadow-sm flex justify-center items-center gap-2"
+                            >
+                                <span>💾</span>
+                                <span>Guardar en mi perfil</span>
+                            </button>
                         </div>
                     </div>
                 )}

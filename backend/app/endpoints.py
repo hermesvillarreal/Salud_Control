@@ -118,7 +118,8 @@ def update_user_profile(
         "full_name", 
         "daily_calories_goal", "daily_protein_goal", 
         "daily_carbs_goal", "daily_fat_goal",
-        "current_goal"
+        "current_goal",
+        "age", "gender", "height_cm", "weight_kg", "activity_level"
     ]
     
     for key, value in user_data.items():
