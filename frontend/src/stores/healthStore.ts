@@ -26,8 +26,18 @@ export interface ExerciseRecord {
     intensity: 'baja' | 'media' | 'alta';
 }
 
+export interface WaistHipRecord {
+    id?: number;
+    user_id?: number;
+    fecha_hora?: string;
+    waist_cm: number;
+    hip_cm: number;
+    rcc: number;
+    notes?: string;
+}
+
 interface HealthMetric {
-    type: 'peso' | 'presion' | 'glucosa';
+    type: 'peso' | 'presion' | 'glucosa' | 'waist_hip';
     value: number;
     unit: string;
     timestamp: string;
@@ -98,16 +108,18 @@ export const useHealthStore = create<HealthState>((set) => ({
     fetchMetrics: async () => {
         set({ isLoading: true, error: null });
         try {
-            const [weights, bp, glucose] = await Promise.all([
+            const [weights, bp, glucose, waistHip] = await Promise.all([
                 api.get('/health/weight'),
                 api.get('/health/bp'),
-                api.get('/health/glucose')
+                api.get('/health/glucose'),
+                api.get('/health/waist_hip')
             ]);
 
             const allMetrics: HealthMetric[] = [
                 ...weights.data.map((w: any) => ({ type: 'peso' as const, value: w.weight, unit: 'kg', timestamp: w.fecha_hora })),
                 ...bp.data.map((b: any) => ({ type: 'presion' as const, value: b.systolic, unit: 'mmHg', timestamp: b.fecha_hora })),
-                ...glucose.data.map((g: any) => ({ type: 'glucosa' as const, value: g.glucose_level, unit: 'mg/dL', timestamp: g.fecha_hora }))
+                ...glucose.data.map((g: any) => ({ type: 'glucosa' as const, value: g.glucose_level, unit: 'mg/dL', timestamp: g.fecha_hora })),
+                ...waistHip.data.map((wh: any) => ({ type: 'waist_hip' as const, value: wh.rcc, unit: 'ratio', timestamp: wh.fecha_hora }))
             ];
 
             set({ metrics: allMetrics, isLoading: false, lastUpdate: new Date().toISOString() });

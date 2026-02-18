@@ -12,6 +12,7 @@ class CalculatorType(str, Enum):
     MACRO = "macro"
     BMI = "bmi"
     ASCVD = "ascvd"
+    RCC = "rcc"
 
 class Gender(str, Enum):
     MALE = "male"
@@ -68,6 +69,7 @@ class User(UserBase, table=True):
     exercise_records: list["ExerciseRecord"] = Relationship(back_populates="user")
     clinical_documents: list["ClinicalDocument"] = Relationship(back_populates="user")
     calculator_results: list["CalculatorResult"] = Relationship(back_populates="user")
+    waist_hip_records: list["WaistHipRecord"] = Relationship(back_populates="user")
 
 class WeightRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -169,3 +171,14 @@ class CalculatorResult(SQLModel, table=True):
     notes: Optional[str] = None
     
     user: User = Relationship(back_populates="calculator_results")
+
+class WaistHipRecord(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    fecha_hora: datetime = Field(default_factory=datetime.now)
+    waist_cm: float
+    hip_cm: float
+    rcc: float
+    notes: Optional[str] = None
+
+    user: User = Relationship(back_populates="waist_hip_records")

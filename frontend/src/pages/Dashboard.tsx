@@ -8,6 +8,8 @@ import GlucoseChart from '../components/charts/GlucoseChart';
 import NutrientsChart from '../components/charts/NutrientsChart';
 import HealthModal from '../components/HealthModal';
 import TelegramBotModal from '../components/TelegramBotModal';
+import RCCChart from '../components/charts/RCCChart';
+import { Ruler } from 'lucide-react';
 import { useHealthStore } from '../stores/healthStore';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
@@ -79,6 +81,15 @@ const Dashboard: React.FC = () => {
         .map(m => ({ date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }), glucose: m.value }))
         .reverse() || [];
 
+    const rccData = metrics
+        .filter(m => m.type === 'waist_hip')
+        .map(m => ({
+            date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }),
+            rcc: m.value,
+            waist: 0 // We might need to store waist separately or fetch records differently
+        }))
+        .reverse() || [];
+
     // Calculate nutrients for today
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
@@ -97,6 +108,7 @@ const Dashboard: React.FC = () => {
     const latestWeight = metrics.find(m => m.type === 'peso')?.value || 0;
     const latestBP = metrics.find(m => m.type === 'presion')?.value || '0/0';
     const latestGlucose = metrics.find(m => m.type === 'glucosa')?.value || 0;
+    const latestRCC = metrics.find(m => m.type === 'waist_hip')?.value || 0;
 
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -193,6 +205,35 @@ const Dashboard: React.FC = () => {
                         </div>
                         <div className="lg:col-span-2">
                             <WeightChart data={weightData} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5. RCC Section */}
+                <div className="mb-8">
+                    <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <Ruler className="w-5 h-5 text-indigo-600" />
+                        Relación Cintura-Cadera (RCC)
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1">
+                            <KpiCard
+                                title="Relación RCC"
+                                value={latestRCC.toString()}
+                                unit=""
+                                trend="stable"
+                                trendValue="--"
+                                icon={<Ruler className="w-6 h-6" />}
+                                color="indigo"
+                            />
+                            <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded text-xs text-yellow-700">
+                                <strong>⚠️ Recordatorio:</strong> Estas mediciones deben realizarse de forma semanal para un monitoreo efectivo.
+                                <br /><br />
+                                <strong>Aviso:</strong> Estos indicadores son referenciales y educativos. Es obligatorio consultar con un profesional de la salud antes de realizar cambios significativos.
+                            </div>
+                        </div>
+                        <div className="lg:col-span-2">
+                            <RCCChart data={rccData} />
                         </div>
                     </div>
                 </div>

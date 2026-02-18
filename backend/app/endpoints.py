@@ -9,7 +9,7 @@ from app.database import get_session
 from app.models import (
     User, UserCreate, WeightRecord, BloodPressureRecord, GlucoseRecord, 
     FoodRecord, ExerciseRecord, ClinicalDocument, UserRole, MealType,
-    CalculatorResult
+    CalculatorResult, WaistHipRecord
 )
 from app.auth.hash_utils import get_password_hash, verify_password
 from app.auth.jwt_utils import create_access_token
@@ -149,7 +149,8 @@ def update_user_profile(
 METRIC_MODELS = {
     "weight": WeightRecord,
     "bp": BloodPressureRecord,
-    "glucose": GlucoseRecord
+    "glucose": GlucoseRecord,
+    "waist_hip": WaistHipRecord
 }
 
 @router.post("/health/{metric_type}")
@@ -474,6 +475,34 @@ def calculate_ascvd_endpoint(
         user_id=user.id,
         calculator_type="ascvd",
         fecha_hora=data.get("fecha_hora"),
+        input_data=json.dumps(data),
+        result_data=json.dumps(result),
+        notes=data.get("notes")
+    )
+    session.add(calc_record)
+    session.commit()
+    session.refresh(calc_record)
+    
+    return {"id": calc_record.id, "result": result}
+
+@router.post("/calculators/rcc")
+def calculate_rcc_endpoint(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    """Calculate RCC and save result to CalculatorResult"""
+    result = calculator_service.calculate_rcc(
+        waist_cm=data["waist_cm"],
+        hip_cm=data["hip_cm"],
+        gender=data.get("gender", user.gender or "male")
+    )
+    
+    # Save to database
+    calc_record = CalculatorResult(
+        user_id=user.id,
+        calculator_type="rcc",
+        fecha_hora=data.get("fecha_hora", datetime.now()),
         input_data=json.dumps(data),
         result_data=json.dumps(result),
         notes=data.get("notes")

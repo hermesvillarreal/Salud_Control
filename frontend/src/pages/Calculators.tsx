@@ -5,9 +5,10 @@ import TDEECalculator from '../components/calculators/TDEECalculator';
 import MacroCalculator from '../components/calculators/MacroCalculator';
 import BMICalculator from '../components/calculators/BMICalculator';
 import ASCVDCalculator from '../components/calculators/ASCVDCalculator';
+import RCCCalculator from '../components/calculators/RCCCalculator';
 import CalculatorHistory from '../components/calculators/CalculatorHistory';
 
-type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'history';
+type CalculatorTab = 'tdee' | 'macro' | 'bmi' | 'ascvd' | 'rcc' | 'history';
 
 export default function Calculators() {
     const navigate = useNavigate();
@@ -22,6 +23,7 @@ export default function Calculators() {
         { id: 'tdee' as CalculatorTab, label: 'TDEE', icon: '🔥' },
         { id: 'macro' as CalculatorTab, label: 'Macros', icon: '🍽️' },
         { id: 'bmi' as CalculatorTab, label: 'BMI', icon: '⚖️' },
+        { id: 'rcc' as CalculatorTab, label: 'RCC', icon: '📏' },
         { id: 'ascvd' as CalculatorTab, label: 'Riesgo Cardiovascular', icon: '❤️' },
         { id: 'history' as CalculatorTab, label: 'Historial', icon: '📊' },
     ];
@@ -68,6 +70,7 @@ export default function Calculators() {
                         {activeTab === 'tdee' && <TDEECalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'macro' && <MacroCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'bmi' && <BMICalculator onSaved={handleCalculationSaved} />}
+                        {activeTab === 'rcc' && <RCCCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'ascvd' && <ASCVDCalculator onSaved={handleCalculationSaved} />}
                         {activeTab === 'history' && <CalculatorHistory key={refreshHistory} />}
                     </div>

@@ -323,3 +323,48 @@ def get_ascvd_recommendation(risk: float) -> str:
         return "Moderate-intensity statin therapy recommended. Consult healthcare provider."
     else:
         return "High-intensity statin therapy recommended. Immediate medical consultation advised."
+
+def calculate_rcc(waist_cm: float, hip_cm: float, gender: str) -> Dict[str, Any]:
+    """
+    Calculate Waist-to-Hip Ratio (RCC) and risk
+    
+    Args:
+        waist_cm: Waist circumference in cm
+        hip_cm: Hip circumference in cm
+        gender: 'male' or 'female'
+        
+    Returns:
+        Dict with RCC, risk classification and waist risk
+    """
+    rcc = waist_cm / hip_cm
+    is_male = gender.lower() == "male"
+    
+    # RCC Risk
+    rcc_healthy = rcc < 0.90 if is_male else rcc < 0.85
+    
+    # Waist circumference risk
+    waist_risk = "Low"
+    if is_male:
+        if waist_cm > 102: waist_risk = "High"
+        elif waist_cm > 94: waist_risk = "Increased"
+    else:
+        if waist_cm > 88: waist_risk = "High"
+        elif waist_cm > 80: waist_risk = "Increased"
+        
+    # Combined classification
+    if not rcc_healthy or waist_risk == "High":
+        classification = "High Risk"
+    elif waist_risk == "Increased":
+        classification = "Increased Risk"
+    else:
+        classification = "Healthy"
+        
+    return {
+        "rcc": round(rcc, 2),
+        "waist_cm": waist_cm,
+        "hip_cm": hip_cm,
+        "waist_risk": waist_risk,
+        "rcc_healthy": rcc_healthy,
+        "classification": classification,
+        "gender": gender
+    }
