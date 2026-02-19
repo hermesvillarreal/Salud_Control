@@ -235,8 +235,15 @@ def update_food_log(
         raise HTTPException(status_code=403, detail="Not authorized to update this record")
     
     for key, value in data.items():
-        if key != "id" and key != "user_id": # Prevent changing ID or ownership
+        if key not in ["id", "user_id", "fecha_hora"] and hasattr(record, key):
              setattr(record, key, value)
+
+    # Handle fecha_hora explicitly if provided
+    if "fecha_hora" in data:
+        try:
+            record.fecha_hora = datetime.fromisoformat(data["fecha_hora"])
+        except (ValueError, TypeError):
+            pass
 
     session.add(record)
     session.commit()
@@ -255,7 +262,9 @@ def log_exercise(
         "exercise_type": data.get("exercise_type"),
         "duration_minutes": data.get("duration_minutes"),
         "calories_burned": data.get("calories_burned"),
-        "intensity": data.get("intensity")
+        "intensity": data.get("intensity"),
+        "met": data.get("met"),
+        "rpe": data.get("rpe")
     }
     
     # Handle custom date if provided
@@ -375,8 +384,15 @@ def update_exercise_log(
         raise HTTPException(status_code=403, detail="Not authorized to update this record")
     
     for key, value in data.items():
-        if key != "id" and key != "user_id": # Prevent changing ID or ownership
+        if key not in ["id", "user_id", "fecha_hora"] and hasattr(record, key):
              setattr(record, key, value)
+
+    # Handle fecha_hora explicitly if provided
+    if "fecha_hora" in data:
+        try:
+            record.fecha_hora = datetime.fromisoformat(data["fecha_hora"])
+        except (ValueError, TypeError):
+            pass
 
     session.add(record)
     session.commit()
@@ -738,4 +754,125 @@ def get_calculator_result(
         "result_data": json.loads(record.result_data),
         "notes": record.notes
     }
+
+
+# --- DASHBOARD CALORIE BALANCE ---
+
+@router.get("/dashboard/calorie-balance")
+def get_calorie_balance(
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+    local_date: Optional[str] = None   # YYYY-MM-DD from the browser (avoids UTC vs local mismatch)
+):
+    """
+    Returns daily caloric balance for today and the last 7 days.
+    Goal priority: user.daily_calories_goal → last TDEE result → None
+    `local_date` should be supplied by the frontend to avoid UTC/timezone mismatches.
+    """
+    from datetime import timedelta, date
+
+    # Resolve caloric goal
+    goal_kcal: Optional[float] = user.daily_calories_goal
+    goal_source = "perfil"
+    tdee_detail: Optional[dict] = None
+
+    if not goal_kcal:
+        last_tdee = session.exec(
+            select(CalculatorResult)
+            .where(CalculatorResult.user_id == user.id)
+            .where(CalculatorResult.calculator_type == "tdee")
+            .order_by(CalculatorResult.fecha_hora.desc())
+        ).first()
+        if last_tdee:
+            try:
+                tdee_result = json.loads(last_tdee.result_data)
+                goal_kcal = tdee_result.get("tdee")
+                goal_source = "tdee"
+                tdee_detail = {
+                    "bmr": round(tdee_result.get("bmr", 0)),
+                    "tdee": round(tdee_result.get("tdee", 0), 1),
+                    "activity_factor": tdee_result.get("activity_factor")
+                }
+            except Exception:
+                pass
+
+    # Use the browser's local date if provided – avoids UTC vs local-time mismatch
+    if local_date:
+        try:
+            today_local = date.fromisoformat(local_date)
+        except ValueError:
+            today_local = date.today()
+    else:
+        today_local = date.today()
+
+    days = [(today_local - timedelta(days=i)) for i in range(6, -1, -1)]  # oldest → newest
+
+    # Fetch records for the 7-day window.
+    # We cast the stored timestamp to a DATE string directly in Python after fetching,
+    # so we are timezone-agnostic (records were stored in local time already).
+    window_start = datetime.combine(days[0], datetime.min.time())
+    food_records = session.exec(
+        select(FoodRecord)
+        .where(FoodRecord.user_id == user.id)
+        .where(FoodRecord.fecha_hora >= window_start)
+    ).all()
+
+    exercise_records = session.exec(
+        select(ExerciseRecord)
+        .where(ExerciseRecord.user_id == user.id)
+        .where(ExerciseRecord.fecha_hora >= window_start)
+    ).all()
+
+    def day_key(dt) -> date:
+        """Extract the DATE portion from a datetime stored in local time."""
+        if dt is None:
+            return today_local
+        if hasattr(dt, 'date'):
+            return dt.date()
+        return date.fromisoformat(str(dt)[:10])
+
+    # Aggregate by day
+    food_by_day: dict = {d: 0.0 for d in days}
+    for f in food_records:
+        dk = day_key(f.fecha_hora)
+        if dk in food_by_day:
+            food_by_day[dk] += f.calories or 0
+
+    exercise_by_day: dict = {d: 0.0 for d in days}
+    for e in exercise_records:
+        dk = day_key(e.fecha_hora)
+        if dk in exercise_by_day:
+            exercise_by_day[dk] += e.calories_burned or 0
+
+    # Build weekly series
+    weekly = []
+    for d in days:
+        consumed = round(food_by_day[d])
+        burned = round(exercise_by_day[d])
+        net = consumed - burned
+        weekly.append({
+            "date": d.strftime("%d %b"),
+            "consumed": consumed,
+            "burned": burned,
+            "net": net,
+            "goal": round(goal_kcal) if goal_kcal else None
+        })
+
+    # Today's summary (last element = today)
+    today_data = weekly[-1]
+
+    return {
+        "today": {
+            "consumed": today_data["consumed"],
+            "burned": today_data["burned"],
+            "net": today_data["net"],
+            "goal": today_data["goal"],
+            "goal_source": goal_source,
+            "compliance_pct": round((today_data["net"] / goal_kcal) * 100) if goal_kcal else None
+        },
+        "weekly": weekly,
+        "goal_source": goal_source,
+        "tdee_detail": tdee_detail
+    }
+
 

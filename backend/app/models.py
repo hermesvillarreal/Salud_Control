@@ -138,6 +138,8 @@ class ExerciseRecord(SQLModel, table=True):
     duration_minutes: int
     calories_burned: Optional[int] = None
     intensity: IntensityType = Field(sa_type=AutoString)
+    met: Optional[float] = None
+    rpe: Optional[int] = None
 
     user: User = Relationship(back_populates="exercise_records")
 

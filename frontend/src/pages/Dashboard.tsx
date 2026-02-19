@@ -6,6 +6,8 @@ import WeightChart from '../components/charts/WeightChart';
 import PressureChart from '../components/charts/PressureChart';
 import GlucoseChart from '../components/charts/GlucoseChart';
 import NutrientsChart from '../components/charts/NutrientsChart';
+import CalorieBalanceCard from '../components/CalorieBalanceCard';
+import CalorieBalanceChart from '../components/charts/CalorieBalanceChart';
 import HealthModal from '../components/HealthModal';
 import TelegramBotModal from '../components/TelegramBotModal';
 import RCCChart from '../components/charts/RCCChart';
@@ -14,8 +16,26 @@ import { useHealthStore } from '../stores/healthStore';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
 
+interface CalorieBalance {
+    today: {
+        consumed: number;
+        burned: number;
+        net: number;
+        goal: number | null;
+        goal_source: string;
+        compliance_pct: number | null;
+    };
+    weekly: { date: string; consumed: number; burned: number; net: number; goal: number | null }[];
+    goal_source: string;
+    tdee_detail?: {
+        bmr: number;
+        tdee: number;
+        activity_factor: number | null;
+    } | null;
+}
+
 const Dashboard: React.FC = () => {
-    const { metrics, fetchMetrics, fetchFoodLogs, foodLogs, fetchExerciseLogs } = useHealthStore();
+    const { metrics, fetchMetrics, fetchFoodLogs, foodLogs, fetchExerciseLogs, waistHipRecords } = useHealthStore();
     const { user, updateUser } = useAuthStore();
 
     // Modal states
@@ -23,13 +43,30 @@ const Dashboard: React.FC = () => {
     const [isPressureModalOpen, setIsPressureModalOpen] = useState(false);
     const [isGlucoseModalOpen, setIsGlucoseModalOpen] = useState(false);
     const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
+    const [calorieBalance, setCalorieBalance] = useState<CalorieBalance | null>(null);
 
     useEffect(() => {
         fetchMetrics();
         fetchFoodLogs();
         fetchExerciseLogs();
         refreshUser();
+        fetchCalorieBalance();
     }, [fetchMetrics, fetchFoodLogs, fetchExerciseLogs]);
+
+    const fetchCalorieBalance = async () => {
+        try {
+            // Pass the browser's local date (YYYY-MM-DD) so the backend can correctly
+            // determine "today" without UTC timezone mismatch
+            const now = new Date();
+            const localDate = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0');
+            const response = await api.get(`/dashboard/calorie-balance?local_date=${localDate}`);
+            setCalorieBalance(response.data);
+        } catch (error) {
+            console.error('Error fetching calorie balance:', error);
+        }
+    };
 
     const refreshUser = async () => {
         try {
@@ -81,12 +118,11 @@ const Dashboard: React.FC = () => {
         .map(m => ({ date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }), glucose: m.value }))
         .reverse() || [];
 
-    const rccData = metrics
-        .filter(m => m.type === 'waist_hip')
-        .map(m => ({
-            date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }),
-            rcc: m.value,
-            waist: 0 // We might need to store waist separately or fetch records differently
+    const rccData = waistHipRecords
+        .map(wh => ({
+            date: new Date(wh.fecha_hora!).toLocaleDateString([], { day: '2-digit', month: 'short' }),
+            rcc: wh.rcc,
+            waist: wh.waist_cm
         }))
         .reverse() || [];
 
@@ -136,6 +172,20 @@ const Dashboard: React.FC = () => {
                         }}
                     />
                 </div>
+
+                {/* 1b. Balance Calórico del Día */}
+                {calorieBalance && (
+                    <div className="mb-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                            <div className="lg:col-span-3">
+                                <CalorieBalanceCard today={calorieBalance.today} tdee_detail={calorieBalance.tdee_detail} />
+                            </div>
+                            <div className="lg:col-span-2">
+                                <CalorieBalanceChart data={calorieBalance.weekly} />
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* 2. Glucosa Section */}
                 <div className="mb-8">

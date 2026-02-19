@@ -49,6 +49,7 @@ interface HealthState {
     metrics: HealthMetric[];
     foodLogs: FoodRecord[];
     exerciseLogs: ExerciseRecord[];
+    waistHipRecords: WaistHipRecord[];
     lastUpdate: string | null;
     isLoading: boolean;
     error: string | null;
@@ -71,6 +72,7 @@ export const useHealthStore = create<HealthState>((set) => ({
     metrics: [],
     foodLogs: [],
     exerciseLogs: [],
+    waistHipRecords: [],
     lastUpdate: null,
     isLoading: false,
     error: null,
@@ -124,7 +126,7 @@ export const useHealthStore = create<HealthState>((set) => ({
                 ...waistHip.data.map((wh: any) => ({ type: 'waist_hip' as const, value: wh.rcc, unit: 'ratio', timestamp: wh.fecha_hora }))
             ];
 
-            set({ metrics: allMetrics, isLoading: false, lastUpdate: new Date().toISOString() });
+            set({ metrics: allMetrics, waistHipRecords: waistHip.data, isLoading: false, lastUpdate: new Date().toISOString() });
         } catch (error: any) {
             set({ error: error.message || 'Error fetching metrics', isLoading: false });
         }
