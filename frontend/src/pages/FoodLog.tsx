@@ -83,7 +83,17 @@ const FoodLog: React.FC = () => {
 
         } catch (error) {
             console.error('Error analyzing food:', error);
-            alert('Error al analizar la comida. Por favor intenta de nuevo.');
+            alert('No pudimos analizar la comida con IA, pero puedes ingresar los datos manualmente.');
+            setEstimatedFood({
+                description: description || "Nueva comida",
+                calories: 0,
+                protein: 0,
+                carbs: 0,
+                fat: 0,
+                meal_type: 'almuerzo',
+                fecha_hora: formatLocalISO()
+            });
+            setEditMode(true);
         } finally {
             setIsAnalyzing(false);
         }
@@ -259,7 +269,7 @@ const FoodLog: React.FC = () => {
                                                                         }));
                                                                     } catch (error) {
                                                                         console.error("Error re-analyzing:", error);
-                                                                        alert("Error al re-analizar.");
+                                                                        alert("Error al re-analizar. Puedes seguir editando los datos manualmente.");
                                                                     } finally {
                                                                         setIsAnalyzing(false);
                                                                     }

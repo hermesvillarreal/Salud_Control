@@ -11,8 +11,8 @@ else:
     print("WARNING: GEMINI_API_KEY not found in environment variables.")
 
 # Model configuration
-#model = genai.GenerativeModel('gemini-2.5-flash')
-model = genai.GenerativeModel('gemini-3-flash-preview')
+model = genai.GenerativeModel('gemini-2.5-flash')
+#model = genai.GenerativeModel('gemini-3-flash-preview')
 
 # Helper to sanitize meal_type
 def sanitize_meal_type(meal_type: str) -> str:

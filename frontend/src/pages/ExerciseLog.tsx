@@ -45,7 +45,17 @@ const ExerciseLog: React.FC = () => {
             setEditMode(false);
         } catch (error) {
             console.error('Error analyzing exercise:', error);
-            alert('Error al analizar el ejercicio.');
+            alert('No pudimos analizar el ejercicio con IA, pero puedes ingresar los datos manualmente.');
+            setEstimatedExercise({
+                exercise_type: description || "Nuevo ejercicio",
+                duration_minutes: 0,
+                calories_burned: 0,
+                intensity: 'media',
+                met: 0,
+                rpe: 0,
+                fecha_hora: formatLocalISO()
+            });
+            setEditMode(true);
         } finally {
             setIsAnalyzing(false);
         }
@@ -72,7 +82,17 @@ const ExerciseLog: React.FC = () => {
             setEditMode(false);
         } catch (error) {
             console.error('Error analyzing image:', error);
-            alert('Error al analizar la imagen del ejercicio.');
+            alert('No pudimos analizar la imagen con IA, pero puedes ingresar los datos manualmente.');
+            setEstimatedExercise({
+                exercise_type: description || "Nuevo ejercicio (desde imagen)",
+                duration_minutes: 0,
+                calories_burned: 0,
+                intensity: 'media',
+                met: 0,
+                rpe: 0,
+                fecha_hora: formatLocalISO()
+            });
+            setEditMode(true);
         } finally {
             setIsAnalyzing(false);
         }
@@ -222,7 +242,7 @@ const ExerciseLog: React.FC = () => {
                                                                         }));
                                                                     } catch (error) {
                                                                         console.error("Error re-analyzing:", error);
-                                                                        alert("Error al re-analizar.");
+                                                                        alert("Error al re-analizar. Puedes seguir editando los datos manualmente.");
                                                                     } finally {
                                                                         setIsAnalyzing(false);
                                                                     }
