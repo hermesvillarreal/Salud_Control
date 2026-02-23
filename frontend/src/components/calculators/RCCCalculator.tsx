@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import api from '../../services/api';
-import { getLocalISOString } from '../../utils/dateUtils';
+import { getLocalISOString, getLocalDateString } from '../../utils/dateUtils';
 import { useAuthStore } from '../../stores/authStore';
 
 interface Props {
@@ -11,7 +11,7 @@ export default function RCCCalculator({ onSaved }: Props) {
     const { user } = useAuthStore();
     const [waist, setWaist] = useState('');
     const [hip, setHip] = useState('');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(getLocalDateString());
     const [result, setResult] = useState<{ rcc: number; classification: string; riskColor: string } | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -59,12 +59,17 @@ export default function RCCCalculator({ onSaved }: Props) {
 
         setLoading(true);
         try {
+            const [year, month, day] = date.split('-').map(Number);
+            const now = new Date();
+            const targetDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+            const fecha_hora = getLocalISOString(targetDate);
+
             // 1. Save to specific table for history/charts (already implemented)
             await api.post('/health/waist_hip', {
                 waist_cm: waistVal,
                 hip_cm: hipVal,
                 rcc: parseFloat(rcc.toFixed(2)),
-                fecha_hora: getLocalISOString(new Date(date + "T" + new Date().toLocaleTimeString('en-GB'))),
+                fecha_hora,
                 notes: `Clasificación: ${classification}`
             });
 
@@ -73,7 +78,7 @@ export default function RCCCalculator({ onSaved }: Props) {
                 waist_cm: waistVal,
                 hip_cm: hipVal,
                 gender: user?.gender || 'male',
-                fecha_hora: getLocalISOString(new Date(date + "T" + new Date().toLocaleTimeString('en-GB'))),
+                fecha_hora,
                 notes: `Clasificación: ${classification}`
             });
 

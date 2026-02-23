@@ -20,3 +20,10 @@ export const normalizeToBackendISO = (input: string): string => {
     // but usually backend accepts YYYY-MM-DDTHH:mm
     return input.length === 16 ? `${input}:00` : input;
 };
+
+// Returns date in YYYY-MM-DD format for date inputs
+export const getLocalDateString = (date: Date = new Date()): string => {
+    const offset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
+};

@@ -14,6 +14,7 @@ import RCCChart from '../components/charts/RCCChart';
 import { Ruler } from 'lucide-react';
 import { useHealthStore, HealthMetric, WaistHipRecord, FoodRecord } from '../stores/healthStore';
 import { useAuthStore } from '../stores/authStore';
+import { getLocalDateString } from '../utils/dateUtils';
 import api from '../services/api';
 
 interface CalorieBalance {
@@ -57,10 +58,7 @@ const Dashboard: React.FC = () => {
         try {
             // Pass the browser's local date (YYYY-MM-DD) so the backend can correctly
             // determine "today" without UTC timezone mismatch
-            const now = new Date();
-            const localDate = now.getFullYear() + '-' +
-                String(now.getMonth() + 1).padStart(2, '0') + '-' +
-                String(now.getDate()).padStart(2, '0');
+            const localDate = getLocalDateString();
             const response = await api.get(`/dashboard/calorie-balance?local_date=${localDate}`);
             setCalorieBalance(response.data);
         } catch (error) {
