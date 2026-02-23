@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
@@ -7,8 +8,23 @@ import Calculators from './pages/Calculators';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
+import api from './services/api';
 
 function App() {
+    useEffect(() => {
+        // Petición silenciosa para despertar el backend
+        const wakeUpBackend = async () => {
+            try {
+                await api.get('/health');
+                console.log('Backend despertado exitosamente');
+            } catch (error) {
+                console.error('Error al despertar el backend:', error);
+            }
+        };
+
+        wakeUpBackend();
+    }, []);
+
     return (
         <Router>
             <Routes>
