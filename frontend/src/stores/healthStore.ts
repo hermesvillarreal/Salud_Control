@@ -38,7 +38,7 @@ export interface WaistHipRecord {
     notes?: string;
 }
 
-interface HealthMetric {
+export interface HealthMetric {
     type: 'peso' | 'presion' | 'glucosa' | 'waist_hip';
     value: number;
     unit: string;

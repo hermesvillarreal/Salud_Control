@@ -180,7 +180,11 @@ def get_health_records(
     if not model_class:
         raise HTTPException(status_code=404, detail="Metric type not found")
     
-    records = session.exec(select(model_class).where(model_class.user_id == user.id)).all()
+    records = session.exec(
+        select(model_class)
+        .where(model_class.user_id == user.id)
+        .order_by(model_class.fecha_hora.desc())
+    ).all()
     return records
 
 # --- FOOD & EXERCISE ---
@@ -433,7 +437,11 @@ async def upload_document(
 
 @router.get("/documents", response_model=List[ClinicalDocument])
 def get_documents(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    return session.exec(select(ClinicalDocument).where(ClinicalDocument.user_id == user.id)).all()
+    return session.exec(
+        select(ClinicalDocument)
+        .where(ClinicalDocument.user_id == user.id)
+        .order_by(ClinicalDocument.fecha_hora.desc())
+    ).all()
 
 # --- DASHBOARD/ANALYSIS ---
 
@@ -443,9 +451,24 @@ async def get_health_analysis(
     session: Session = Depends(get_session)
 ):
     # Fetch recent history
-    weights = session.exec(select(WeightRecord).where(WeightRecord.user_id == user.id).limit(5)).all()
-    bp = session.exec(select(BloodPressureRecord).where(BloodPressureRecord.user_id == user.id).limit(5)).all()
-    glucose = session.exec(select(GlucoseRecord).where(GlucoseRecord.user_id == user.id).limit(5)).all()
+    weights = session.exec(
+        select(WeightRecord)
+        .where(WeightRecord.user_id == user.id)
+        .order_by(WeightRecord.fecha_hora.desc())
+        .limit(5)
+    ).all()
+    bp = session.exec(
+        select(BloodPressureRecord)
+        .where(BloodPressureRecord.user_id == user.id)
+        .order_by(BloodPressureRecord.fecha_hora.desc())
+        .limit(5)
+    ).all()
+    glucose = session.exec(
+        select(GlucoseRecord)
+        .where(GlucoseRecord.user_id == user.id)
+        .order_by(GlucoseRecord.fecha_hora.desc())
+        .limit(5)
+    ).all()
     
     user_history = {
         "user": user.full_name or user.username,

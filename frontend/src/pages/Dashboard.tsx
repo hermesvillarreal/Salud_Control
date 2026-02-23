@@ -12,7 +12,7 @@ import HealthModal from '../components/HealthModal';
 import TelegramBotModal from '../components/TelegramBotModal';
 import RCCChart from '../components/charts/RCCChart';
 import { Ruler } from 'lucide-react';
-import { useHealthStore } from '../stores/healthStore';
+import { useHealthStore, HealthMetric, WaistHipRecord, FoodRecord } from '../stores/healthStore';
 import { useAuthStore } from '../stores/authStore';
 import api from '../services/api';
 
@@ -104,47 +104,57 @@ const Dashboard: React.FC = () => {
 
     // Derived data for charts (fallback to mock if empty for demonstration, but aiming for real)
     const weightData = metrics
-        .filter(m => m.type === 'peso')
-        .map(m => ({ date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }), weight: m.value }))
-        .reverse() || [];
+        .filter((m: HealthMetric) => m.type === 'peso')
+        .sort((a: HealthMetric, b: HealthMetric) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((m: HealthMetric) => ({
+            date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }),
+            weight: m.value
+        })) || [];
 
     const pressureData = metrics
-        .filter(m => m.type === 'presion')
-        .map(m => ({ date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }), systolic: m.value, diastolic: 80 })) // Diastolic logic needs improvement but good for now
-        .reverse() || [];
+        .filter((m: HealthMetric) => m.type === 'presion')
+        .sort((a: HealthMetric, b: HealthMetric) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((m: HealthMetric) => ({
+            date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }),
+            systolic: m.value,
+            diastolic: 80
+        })) || [];
 
     const glucoseData = metrics
-        .filter(m => m.type === 'glucosa')
-        .map(m => ({ date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }), glucose: m.value }))
-        .reverse() || [];
+        .filter((m: HealthMetric) => m.type === 'glucosa')
+        .sort((a: HealthMetric, b: HealthMetric) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((m: HealthMetric) => ({
+            date: new Date(m.timestamp).toLocaleDateString([], { day: '2-digit', month: 'short' }),
+            glucose: m.value
+        })) || [];
 
     const rccData = waistHipRecords
-        .map(wh => ({
+        .sort((a: WaistHipRecord, b: WaistHipRecord) => new Date(a.fecha_hora!).getTime() - new Date(b.fecha_hora!).getTime())
+        .map((wh: WaistHipRecord) => ({
             date: new Date(wh.fecha_hora!).toLocaleDateString([], { day: '2-digit', month: 'short' }),
             rcc: wh.rcc,
             waist: wh.waist_cm
-        }))
-        .reverse() || [];
+        })) || [];
 
     // Calculate nutrients for today
     const now = new Date();
     const offset = now.getTimezoneOffset() * 60000;
     const localDate = new Date(now.getTime() - offset);
-    const today = localDate.toISOString().split('T')[0];
-    const todaysFood = foodLogs.filter(f => f.fecha_hora?.startsWith(today));
+    const todayStr = localDate.toISOString().split('T')[0];
+    const todaysFood = foodLogs.filter((f: FoodRecord) => f.fecha_hora?.startsWith(todayStr));
 
     const nutrientsData = [
-        { name: 'Proteína', value: todaysFood.reduce((acc, f) => acc + (f.protein || 0), 0), color: '#22c55e' },
-        { name: 'Carbos', value: todaysFood.reduce((acc, f) => acc + (f.carbs || 0), 0), color: '#ef4444' },
-        { name: 'Grasas', value: todaysFood.reduce((acc, f) => acc + (f.fat || 0), 0), color: '#f59e0b' },
+        { name: 'Proteína', value: todaysFood.reduce((acc: number, f: FoodRecord) => acc + (f.protein || 0), 0), color: '#22c55e' },
+        { name: 'Carbos', value: todaysFood.reduce((acc: number, f: FoodRecord) => acc + (f.carbs || 0), 0), color: '#ef4444' },
+        { name: 'Grasas', value: todaysFood.reduce((acc: number, f: FoodRecord) => acc + (f.fat || 0), 0), color: '#f59e0b' },
     ];
 
-    const totalCalories = todaysFood.reduce((acc, f) => acc + (f.calories || 0), 0);
+    const totalCalories = todaysFood.reduce((acc: number, f: FoodRecord) => acc + (f.calories || 0), 0);
 
-    const latestWeight = metrics.find(m => m.type === 'peso')?.value || 0;
-    const latestBP = metrics.find(m => m.type === 'presion')?.value || '0/0';
-    const latestGlucose = metrics.find(m => m.type === 'glucosa')?.value || 0;
-    const latestRCC = metrics.find(m => m.type === 'waist_hip')?.value || 0;
+    const latestWeight = metrics.find((m: HealthMetric) => m.type === 'peso')?.value || 0;
+    const latestBP = metrics.find((m: HealthMetric) => m.type === 'presion')?.value || '0/0';
+    const latestGlucose = metrics.find((m: HealthMetric) => m.type === 'glucosa')?.value || 0;
+    const latestRCC = metrics.find((m: HealthMetric) => m.type === 'waist_hip')?.value || 0;
 
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
