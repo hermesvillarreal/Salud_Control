@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useHealthStore, FoodRecord, MealType } from '../stores/healthStore';
 import { formatLocalISO, normalizeToBackendISO } from '../utils/dateUtils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const FoodLog: React.FC = () => {
     const navigate = useNavigate();
@@ -71,6 +73,7 @@ const FoodLog: React.FC = () => {
                 protein: response.data.protein,
                 carbs: response.data.carbs,
                 fat: response.data.fat,
+                tabla_nutricional: response.data.tabla_nutricional,
                 meal_type: (['desayuno', 'merienda_manana', 'almuerzo', 'merienda_tarde', 'cena', 'merienda_postcena'].includes(response.data.meal_type?.toLowerCase())
                     ? response.data.meal_type.toLowerCase()
                     : 'almuerzo'),
@@ -262,6 +265,7 @@ const FoodLog: React.FC = () => {
                                                                             id: prev?.id,
                                                                             user_id: prev?.user_id,
                                                                             fecha_hora: prev?.fecha_hora,
+                                                                            tabla_nutricional: response.data.tabla_nutricional,
                                                                             // If backend returns meal_type, use it, else keep existing or default
                                                                             meal_type: (['desayuno', 'merienda_manana', 'almuerzo', 'merienda_tarde', 'cena', 'merienda_postcena'].includes(response.data.meal_type?.toLowerCase())
                                                                                 ? response.data.meal_type.toLowerCase()
@@ -347,6 +351,31 @@ const FoodLog: React.FC = () => {
                                         />
                                     </div>
 
+                                    {estimatedFood.tabla_nutricional && (
+                                        <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                                            <div className="flex items-center gap-2 mb-3 text-slate-800">
+                                                <PieChart className="w-4 h-4 text-blue-500" />
+                                                <h4 className="font-bold text-sm">Tabla Nutricional Detallada</h4>
+                                            </div>
+                                            <div className="text-sm text-slate-600 overflow-x-auto">
+                                                {editMode ? (
+                                                    <textarea
+                                                        value={estimatedFood.tabla_nutricional}
+                                                        onChange={(e) => handleEditChange('tabla_nutricional', e.target.value)}
+                                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white transition-all font-mono text-xs resize-none h-40"
+                                                        placeholder="Información nutricional en formato Markdown (tabla)..."
+                                                    />
+                                                ) : (
+                                                    <div className="prose prose-slate prose-sm max-w-none prose-table:border prose-table:rounded-xl prose-th:bg-slate-50 prose-th:p-2 prose-td:p-2 prose-tr:border-b last:prose-tr:border-0">
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {estimatedFood.tabla_nutricional || ''}
+                                                        </ReactMarkdown>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {editMode && (
                                         <div className="mt-4 animate-in fade-in duration-300">
                                             <label className="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">Fecha y Hora del Consumo</label>
@@ -397,7 +426,12 @@ const FoodLog: React.FC = () => {
                         </div>
 
                         <div className="space-y-4">
-                            {storeLoading && foodLogs.length === 0 ? (
+                            {useHealthStore.getState().error && foodLogs.length === 0 ? (
+                                <div className="py-8 text-center text-red-500 bg-red-50 rounded-2xl border border-red-100">
+                                    <p className="font-medium">Error al cargar el historial</p>
+                                    <p className="text-xs opacity-70">{useHealthStore.getState().error}</p>
+                                </div>
+                            ) : storeLoading && foodLogs.length === 0 ? (
                                 <div className="py-8 text-center text-slate-400">Cargando historial...</div>
                             ) : foodLogs.length === 0 ? (
                                 <div className="py-8 text-center text-slate-400 italic">No hay comidas registradas hoy.</div>

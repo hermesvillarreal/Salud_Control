@@ -53,6 +53,13 @@ async def analyze_food_text(description: str) -> Dict[str, Any]:
     - carbs (float, en gramos)
     - fat (float, en gramos)
     - meal_type (string, debe ser uno de: desayuno, merienda_manana, almuerzo, merienda_tarde, cena, merienda_postcena)
+    - tabla_nutricional (string, una tabla en formato Markdown que desglose los componentes de la comida como en el siguiente ejemplo:
+      | Alimento | Calorías (kcal) | Proteína (g) | Grasas (g) | Carbohidratos (g) |
+      | :--- | :--- | :--- | :--- | :--- |
+      | Ingrete 1 (cantidad) | XX | XX | XX | XX |
+      | Ingrediente 2 (cantidad) | XX | XX | XX | XX |
+      | **TOTAL [MEAL_TYPE]** | **TOTAL** | **TOTAL** | **TOTAL** | **TOTAL** |
+      )
 
     Sugerencia para meal_type basado en la hora actual: elige el más apropiado.
     Si no puedes determinar los valores, intenta dar una estimación promedio razonable.
@@ -102,6 +109,13 @@ async def analyze_food_image(image_bytes: bytes, mime_type: str, description: st
     - fat (float, en gramos)
     - food_name (string, nombre del plato identificado)
     - meal_type (string, debe ser uno de: desayuno, merienda_manana, almuerzo, merienda_tarde, cena, merienda_postcena)
+    - tabla_nutricional (string, una tabla en formato Markdown que desglose los componentes identificados en la imagen como en el siguiente ejemplo:
+      | Alimento | Calorías (kcal) | Proteína (g) | Grasas (g) | Carbohidratos (g) |
+      | :--- | :--- | :--- | :--- | :--- |
+      | Componente 1 (cantidad est.) | XX | XX | XX | XX |
+      | Componente 2 (cantidad est.) | XX | XX | XX | XX |
+      | **TOTAL [MEAL_TYPE]** | **TOTAL** | **TOTAL** | **TOTAL** | **TOTAL** |
+      )
 
     Si no puedes determinar los valores o no hay comida en la imagen, responde con un objeto JSON con error.
     """

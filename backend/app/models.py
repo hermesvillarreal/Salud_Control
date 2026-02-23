@@ -122,6 +122,7 @@ class FoodRecord(SQLModel, table=True):
     carbs: Optional[float] = None
     fat: Optional[float] = None
     image_url: Optional[str] = None
+    tabla_nutricional: Optional[str] = None
 
     user: User = Relationship(back_populates="food_records")
 

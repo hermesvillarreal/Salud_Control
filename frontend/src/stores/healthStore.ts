@@ -14,6 +14,7 @@ export interface FoodRecord {
     carbs?: number;
     fat?: number;
     image_url?: string;
+    tabla_nutricional?: string;
 }
 
 export interface ExerciseRecord {
