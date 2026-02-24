@@ -1,6 +1,5 @@
-from __future__ import annotations
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from sqlmodel import Field, SQLModel, Relationship, AutoString
 from enum import Enum
 
@@ -65,14 +64,14 @@ class User(UserBase, table=True):
     activity_level: Optional[ActivityLevel] = None
 
     # Relationships (Optional but good practice)
-    weight_records: list["WeightRecord"] = Relationship(back_populates="user")
-    bp_records: list["BloodPressureRecord"] = Relationship(back_populates="user")
-    glucose_records: list["GlucoseRecord"] = Relationship(back_populates="user")
-    food_records: list["FoodRecord"] = Relationship(back_populates="user")
-    exercise_records: list["ExerciseRecord"] = Relationship(back_populates="user")
-    clinical_documents: list["ClinicalDocument"] = Relationship(back_populates="user")
-    calculator_results: list["CalculatorResult"] = Relationship(back_populates="user")
-    waist_hip_records: list["WaistHipRecord"] = Relationship(back_populates="user")
+    weight_records: List["WeightRecord"] = Relationship(back_populates="user")
+    bp_records: List["BloodPressureRecord"] = Relationship(back_populates="user")
+    glucose_records: List["GlucoseRecord"] = Relationship(back_populates="user")
+    food_records: List["FoodRecord"] = Relationship(back_populates="user")
+    exercise_records: List["ExerciseRecord"] = Relationship(back_populates="user")
+    clinical_documents: List["ClinicalDocument"] = Relationship(back_populates="user")
+    calculator_results: List["CalculatorResult"] = Relationship(back_populates="user")
+    waist_hip_records: List["WaistHipRecord"] = Relationship(back_populates="user")
 
 class WeightRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

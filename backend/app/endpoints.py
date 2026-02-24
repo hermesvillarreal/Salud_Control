@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlmodel import Session, select
+from sqlalchemy import func
 from typing import List, Optional
 import shutil
 import os
@@ -27,9 +28,12 @@ router = APIRouter()
 
 @router.post("/auth/register", status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, session: Session = Depends(get_session)):
-    # Check if user exists (username or email)
+    # Check if user exists (username or email) - case-insensitive
     existing_user = session.exec(
-        select(User).where((User.username == user_data.username) | (User.email == user_data.email))
+        select(User).where(
+            (func.lower(User.username) == user_data.username.lower().strip()) | 
+            (func.lower(User.email) == user_data.email.lower().strip())
+        )
     ).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username or Email already registered")
@@ -54,12 +58,22 @@ def login(user_data: dict, session: Session = Depends(get_session)):
     if not login_id or not password:
         raise HTTPException(status_code=400, detail="Username/Email and password required")
 
-    # Search by username OR email
+    login_id = login_id.strip()
+
+    # Search by username OR email (case-insensitive)
     user = session.exec(
-        select(User).where((User.username == login_id) | (User.email == login_id))
+        select(User).where(
+            (func.lower(User.username) == login_id.lower()) | 
+            (func.lower(User.email) == login_id.lower())
+        )
     ).first()
     
-    if not user or not verify_password(password, user.password_hash):
+    if not user:
+        print(f"DEBUG: Login failed - User not found: {login_id}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    if not verify_password(password, user.password_hash):
+        print(f"DEBUG: Login failed - Password mismatch for user: {login_id}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     access_token = create_access_token(data={"sub": user.username})

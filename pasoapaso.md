@@ -57,7 +57,7 @@ Verifica en `backend/app/main.py` que los CORS permitan el dominio de Cloudflare
 ```python
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Permitir que Cloudflare hable con Render
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
