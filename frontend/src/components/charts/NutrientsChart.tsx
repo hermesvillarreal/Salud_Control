@@ -66,40 +66,110 @@ const NutrientsChart: React.FC<NutrientsChartProps> = ({ data, totalCalories, go
                 </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+            <div className="flex justify-around mt-4">
                 <div className="flex flex-col items-center">
-                    <span className="text-xs font-medium text-slate-500">Proteína</span>
-                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#22c55e' }}>
-                        {Math.round(getValue('ote'))}g{goals?.protein ? <span className="text-slate-400 font-normal">/{goals.protein}g</span> : ''}
-                    </div>
-                    {goals?.protein ? (
-                        <span className="text-xs text-slate-500 font-medium">
-                            {((getValue('ote') / goals.protein) * 100).toFixed(1)}%
-                        </span>
-                    ) : null}
+                    <span className="text-xs font-medium text-slate-500 mb-2">Proteína</span>
+                    <CircularProgress
+                        value={getValue('ote')}
+                        max={goals?.protein}
+                        color="#22c55e"
+                    >
+                        <div className="flex flex-col items-center">
+                            <div className="font-bold text-slate-800 text-sm">
+                                {Math.round(getValue('ote'))}g{goals?.protein ? <span className="text-slate-400 font-normal text-xs">/{goals.protein}g</span> : ''}
+                            </div>
+                            {goals?.protein ? (
+                                <span className="text-[10px] text-slate-500 font-medium leading-none mt-0.5">
+                                    {((getValue('ote') / goals.protein) * 100).toFixed(1)}%
+                                </span>
+                            ) : null}
+                        </div>
+                    </CircularProgress>
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className="text-xs font-medium text-slate-500">Carbos</span>
-                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#ef4444' }}>
-                        {Math.round(getValue('arb'))}g{goals?.carbs ? <span className="text-slate-400 font-normal">/{goals.carbs}g</span> : ''}
-                    </div>
-                    {goals?.carbs ? (
-                        <span className="text-xs text-slate-500 font-medium">
-                            {((getValue('arb') / goals.carbs) * 100).toFixed(1)}%
-                        </span>
-                    ) : null}
+                    <span className="text-xs font-medium text-slate-500 mb-2">Carbos</span>
+                    <CircularProgress
+                        value={getValue('arb')}
+                        max={goals?.carbs}
+                        color="#ef4444"
+                    >
+                        <div className="flex flex-col items-center">
+                            <div className="font-bold text-slate-800 text-sm">
+                                {Math.round(getValue('arb'))}g{goals?.carbs ? <span className="text-slate-400 font-normal text-xs">/{goals.carbs}g</span> : ''}
+                            </div>
+                            {goals?.carbs ? (
+                                <span className="text-[10px] text-slate-500 font-medium leading-none mt-0.5">
+                                    {((getValue('arb') / goals.carbs) * 100).toFixed(1)}%
+                                </span>
+                            ) : null}
+                        </div>
+                    </CircularProgress>
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className="text-xs font-medium text-slate-500">Grasas</span>
-                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#f59e0b' }}>
-                        {Math.round(getValue('ras'))}g{goals?.fat ? <span className="text-slate-400 font-normal">/{goals.fat}g</span> : ''}
-                    </div>
-                    {goals?.fat ? (
-                        <span className="text-xs text-slate-500 font-medium">
-                            {((getValue('ras') / goals.fat) * 100).toFixed(1)}%
-                        </span>
-                    ) : null}
+                    <span className="text-xs font-medium text-slate-500 mb-2">Grasas</span>
+                    <CircularProgress
+                        value={getValue('ras')}
+                        max={goals?.fat}
+                        color="#f59e0b"
+                    >
+                        <div className="flex flex-col items-center">
+                            <div className="font-bold text-slate-800 text-sm">
+                                {Math.round(getValue('ras'))}g{goals?.fat ? <span className="text-slate-400 font-normal text-xs">/{goals.fat}g</span> : ''}
+                            </div>
+                            {goals?.fat ? (
+                                <span className="text-[10px] text-slate-500 font-medium leading-none mt-0.5">
+                                    {((getValue('ras') / goals.fat) * 100).toFixed(1)}%
+                                </span>
+                            ) : null}
+                        </div>
+                    </CircularProgress>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// SVG Circular Progress
+const CircularProgress = ({ value, max, color, children }: { value: number, max?: number, color: string, children: React.ReactNode }) => {
+    const size = 80;
+    const strokeWidth = 6;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+
+    // Si no hay maximo, asume que esta al 0% para no llenar todo (o se podria omitir el anillo de progreso)
+    const percentage = max ? Math.min((value / max) * 100, 100) : 0;
+    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            {max !== undefined ? (
+                <svg width={size} height={size} className="absolute inset-0 transform -rotate-90">
+                    {/* Background circle */}
+                    <circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        fill="transparent"
+                        stroke="#f1f5f9" // slate-100
+                        strokeWidth={strokeWidth}
+                    />
+                    {/* Progress circle */}
+                    <circle
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        fill="transparent"
+                        stroke={color}
+                        strokeWidth={strokeWidth}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeDashoffset}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000 ease-out"
+                    />
+                </svg>
+            ) : null}
+            <div className="relative z-10 flex items-center justify-center w-full h-full">
+                {children}
             </div>
         </div>
     );
