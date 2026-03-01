@@ -67,23 +67,38 @@ const NutrientsChart: React.FC<NutrientsChartProps> = ({ data, totalCalories, go
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center">
                     <span className="text-xs font-medium text-slate-500">Proteína</span>
-                    {/* Looking for "Proteína" or "Protein" */}
-                    <span className="font-bold text-slate-800" style={{ color: '#22c55e' }}>{Math.round(getValue('ote'))}g</span>
-                    {goals?.protein && <span className="text-xs text-slate-400">/ {goals.protein}g</span>}
+                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#22c55e' }}>
+                        {Math.round(getValue('ote'))}g{goals?.protein ? <span className="text-slate-400 font-normal">/{goals.protein}g</span> : ''}
+                    </div>
+                    {goals?.protein ? (
+                        <span className="text-xs text-slate-500 font-medium">
+                            {((getValue('ote') / goals.protein) * 100).toFixed(1)}%
+                        </span>
+                    ) : null}
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center">
                     <span className="text-xs font-medium text-slate-500">Carbos</span>
-                    {/* Looking for "Carbohidratos" or "Carbs" */}
-                    <span className="font-bold text-slate-800" style={{ color: '#ef4444' }}>{Math.round(getValue('arb'))}g</span>
-                    {goals?.carbs && <span className="text-xs text-slate-400">/ {goals.carbs}g</span>}
+                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#ef4444' }}>
+                        {Math.round(getValue('arb'))}g{goals?.carbs ? <span className="text-slate-400 font-normal">/{goals.carbs}g</span> : ''}
+                    </div>
+                    {goals?.carbs ? (
+                        <span className="text-xs text-slate-500 font-medium">
+                            {((getValue('arb') / goals.carbs) * 100).toFixed(1)}%
+                        </span>
+                    ) : null}
                 </div>
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center">
                     <span className="text-xs font-medium text-slate-500">Grasas</span>
-                    {/* Looking for "Grasas" or "Fat" */}
-                    <span className="font-bold text-slate-800" style={{ color: '#f59e0b' }}>{Math.round(getValue('ras'))}g</span>
-                    {goals?.fat && <span className="text-xs text-slate-400">/ {goals.fat}g</span>}
+                    <div className="font-bold text-slate-800 mt-0.5" style={{ color: '#f59e0b' }}>
+                        {Math.round(getValue('ras'))}g{goals?.fat ? <span className="text-slate-400 font-normal">/{goals.fat}g</span> : ''}
+                    </div>
+                    {goals?.fat ? (
+                        <span className="text-xs text-slate-500 font-medium">
+                            {((getValue('ras') / goals.fat) * 100).toFixed(1)}%
+                        </span>
+                    ) : null}
                 </div>
             </div>
         </div>
