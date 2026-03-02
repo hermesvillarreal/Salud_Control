@@ -139,6 +139,17 @@ const Appointments: React.FC = () => {
         }
     };
 
+    const handleDeleteAppointment = async (appoId: number) => {
+        if (!window.confirm("¿Estás seguro de que deseas eliminar esta cita? Sólo se pueden eliminar citas canceladas.")) return;
+        try {
+            await api.delete(`/appointments/${appoId}`);
+            loadAppointments();
+        } catch (error) {
+            alert('Error al eliminar la cita');
+            console.error(error);
+        }
+    };
+
     const handleAddPrerequisite = async () => {
         if (!selectedAppo || !newPrereq) return;
         try {
@@ -329,6 +340,18 @@ const Appointments: React.FC = () => {
                                                 appo.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                             {appo.status === 'scheduled' ? 'Programada' : appo.status === 'completed' ? 'Completada' : 'Cancelada'}
                                         </span>
+                                        {appo.status === 'cancelled' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteAppointment(appo.id);
+                                                }}
+                                                className="text-red-400 hover:text-red-600 p-1 bg-red-50 rounded-full ml-1 md:ml-2"
+                                                title="Eliminar cita"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))
