@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarDays, Plus, Info, Stethoscope, AlertCircle, FileSearch, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { CalendarDays, Plus, Info, Stethoscope, AlertCircle, FileSearch, Trash2, CheckCircle2, Circle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
@@ -232,6 +232,14 @@ const Appointments: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-50 p-4 md:p-8">
             <div className="max-w-4xl mx-auto">
+                <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors mb-6 group"
+                >
+                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                    <span className="font-medium">Volver al Panel</span>
+                </button>
+
                 {/* Header block */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -245,13 +253,7 @@ const Appointments: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="mb-6 flex gap-2">
-                    <button
-                        onClick={() => navigate('/dashboard')}
-                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl font-medium transition-colors"
-                    >
-                        Volver
-                    </button>
+                <div className="mb-6 flex justify-end gap-2">
                     <button
                         onClick={openCreateModal}
                         className="flex items-center gap-2 bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
