@@ -273,3 +273,49 @@ async def analyze_exercise_image(image_bytes: bytes, mime_type: str, description
             "calories_burned": 0,
             "error": "Failed to analyze exercise image"
         }
+
+async def analyze_medical_document(file_bytes: bytes, mime_type: str, doc_title: str) -> Dict[str, Any]:
+    """
+    Analyzes a clinical document (PDF, PNG, JPEG) to extract key findings and provide a basic summary.
+    """
+    if not API_KEY:
+        return {"error": "AI service not configured"}
+
+    prompt = f"""
+    Eres un asistente médico inteligente para el sistema 'Salud Control'. 
+    Analiza este documento clínico titulado "{doc_title}" y proporciona un resumen para el paciente.
+    El propósito de tu análisis es ayudar al paciente a entender los resultados generales, pero DEBES
+    Aclarar de forma contundente que esta es una evaluación automática provista por IA y que para
+    datos finales y diagnósticos se debe guiar ÚNICAMENTE por su profesional de la salud.
+
+    Responde ÚNICAMENTE con un objeto JSON válido con los siguientes campos:
+    - doc_title (string, repite el título)
+    - summary (string, un resumen general del documento en 2 o 3 oraciones fáciles de entender)
+    - key_findings (lista de strings, enumerando los resultados clave, valores anormales si los hay, etc.)
+    - ai_disclaimer (string, debe ser la advertencia contundente de que esto es una IA y no reemplaza al médico)
+    """
+
+    try:
+        document_part = {
+            "mime_type": mime_type,
+            "data": file_bytes
+        }
+        
+        response = model.generate_content([prompt, document_part])
+        content = response.text.strip()
+        
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+            
+        return json.loads(content)
+    except Exception as e:
+        print(f"Error in analyze_medical_document: {e}")
+        return {
+            "doc_title": doc_title,
+            "summary": "No se pudo analizar el documento.",
+            "key_findings": [],
+            "ai_disclaimer": "Recuerda consultar siempre a tu médico para revisar tus documentos clínicos.",
+            "error": "Failed to analyze document"
+        }

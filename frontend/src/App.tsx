@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import FoodLog from './pages/FoodLog';
 import ExerciseLog from './pages/ExerciseLog';
 import ClinicalDocs from './pages/ClinicalDocs';
+import Appointments from './pages/Appointments';
 import Calculators from './pages/Calculators';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -38,6 +39,7 @@ function App() {
                     <Route path="/food-log" element={<FoodLog />} />
                     <Route path="/exercise-log" element={<ExerciseLog />} />
                     <Route path="/documents" element={<ClinicalDocs />} />
+                    <Route path="/appointments" element={<Appointments />} />
                     <Route path="/calculators" element={<Calculators />} />
                 </Route>
 

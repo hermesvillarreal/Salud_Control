@@ -72,6 +72,7 @@ class User(UserBase, table=True):
     clinical_documents: List["ClinicalDocument"] = Relationship(back_populates="user")
     calculator_results: List["CalculatorResult"] = Relationship(back_populates="user")
     waist_hip_records: List["WaistHipRecord"] = Relationship(back_populates="user")
+    appointments: List["Appointment"] = Relationship(back_populates="user")
 
 class WeightRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -187,3 +188,41 @@ class WaistHipRecord(SQLModel, table=True):
     notes: Optional[str] = None
 
     user: User = Relationship(back_populates="waist_hip_records")
+
+class AppointmentStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+class Appointment(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    fecha_hora: datetime
+    doctor_name: str
+    specialty: Optional[str] = None
+    reason: str
+    symptoms: Optional[str] = None
+    diagnosis: Optional[str] = None
+    location: Optional[str] = None
+    phone_number: Optional[str] = None
+    status: AppointmentStatus = Field(default=AppointmentStatus.SCHEDULED, sa_type=AutoString)
+    notes: Optional[str] = None
+    
+    user: User = Relationship(back_populates="appointments")
+    prerequisites: List["AppointmentPrerequisite"] = Relationship(back_populates="appointment")
+
+class PrerequisiteType(str, Enum):
+    LAB = "lab"
+    EXAM = "exam"
+    DOCUMENT = "document"
+
+class AppointmentPrerequisite(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    appointment_id: int = Field(foreign_key="appointment.id")
+    description: str
+    prerequisite_type: PrerequisiteType = Field(sa_type=AutoString)
+    is_completed: bool = Field(default=False)
+    document_id: Optional[int] = Field(default=None, foreign_key="clinicaldocument.id")
+    
+    appointment: Appointment = Relationship(back_populates="prerequisites")
+    document: Optional[ClinicalDocument] = Relationship()

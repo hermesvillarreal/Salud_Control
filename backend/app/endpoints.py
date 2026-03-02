@@ -11,14 +11,14 @@ from app.database import get_session
 from app.models import (
     User, UserCreate, WeightRecord, BloodPressureRecord, GlucoseRecord, 
     FoodRecord, ExerciseRecord, ClinicalDocument, UserRole, MealType,
-    CalculatorResult, WaistHipRecord
+    CalculatorResult, WaistHipRecord, Appointment, AppointmentPrerequisite, AppointmentStatus, PrerequisiteType
 )
 from app.auth.hash_utils import get_password_hash, verify_password
 from app.auth.jwt_utils import create_access_token
 from app.auth.dependencies import get_current_user
 from app.services.ai_service import (
     analyze_food_text, analyze_food_image, analyze_health_summary,
-    analyze_exercise_text, analyze_exercise_image
+    analyze_exercise_text, analyze_exercise_image, analyze_medical_document
 )
 from app.services import calculator_service
 
@@ -456,6 +456,174 @@ def get_documents(user: User = Depends(get_current_user), session: Session = Dep
         .where(ClinicalDocument.user_id == user.id)
         .order_by(ClinicalDocument.fecha_hora.desc())
     ).all()
+
+
+# --- APPOINTMENTS & PREREQUISITES ---
+
+@router.post("/appointments")
+def create_appointment(
+    data: dict,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    fecha_hora_raw = data.get("fecha_hora")
+    try:
+        if isinstance(fecha_hora_raw, str):
+            fecha_hora = datetime.fromisoformat(fecha_hora_raw)
+        else:
+            fecha_hora = datetime.now()
+    except ValueError:
+        fecha_hora = datetime.now()
+        
+    appo = Appointment(
+        user_id=user.id,
+        fecha_hora=fecha_hora,
+        doctor_name=data.get("doctor_name"),
+        specialty=data.get("specialty"),
+        reason=data.get("reason"),
+        symptoms=data.get("symptoms"),
+        diagnosis=data.get("diagnosis"),
+        location=data.get("location"),
+        phone_number=data.get("phone_number"),
+        status=data.get("status", AppointmentStatus.SCHEDULED),
+        notes=data.get("notes")
+    )
+    session.add(appo)
+    session.commit()
+    session.refresh(appo)
+    return appo
+
+@router.get("/appointments", response_model=List[Appointment])
+def get_appointments(user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    return session.exec(
+        select(Appointment)
+        .where(Appointment.user_id == user.id)
+        .order_by(Appointment.fecha_hora.asc())
+    ).all()
+
+@router.get("/appointments/{appo_id}")
+def get_appointment(appo_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    appo = session.get(Appointment, appo_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # manually construct response to include prereqs
+    return {
+        **appo.dict(),
+        "prerequisites": [p.dict() for p in appo.prerequisites]
+    }
+
+@router.put("/appointments/{appo_id}")
+def update_appointment(appo_id: int, data: dict, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    appo = session.get(Appointment, appo_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    for key, value in data.items():
+        if key not in ["id", "user_id"] and hasattr(appo, key):
+            # Special parsing for datetime
+            if key == "fecha_hora" and isinstance(value, str):
+                try:
+                    value = datetime.fromisoformat(value)
+                except ValueError:
+                    continue
+            setattr(appo, key, value)
+            
+    session.add(appo)
+    session.commit()
+    session.refresh(appo)
+    return appo
+
+@router.delete("/appointments/{appo_id}")
+def delete_appointment(appo_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    appo = session.get(Appointment, appo_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    session.delete(appo)
+    session.commit()
+    return {"message": "Appointment deleted successfully"}
+
+@router.post("/appointments/{appo_id}/prerequisites")
+def create_prerequisite(appo_id: int, data: dict, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    appo = session.get(Appointment, appo_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+        
+    req = AppointmentPrerequisite(
+        appointment_id=appo_id,
+        description=data.get("description"),
+        prerequisite_type=data.get("prerequisite_type", PrerequisiteType.LAB),
+        is_completed=data.get("is_completed", False),
+        document_id=data.get("document_id")
+    )
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return req
+
+@router.put("/prerequisites/{req_id}")
+def update_prerequisite(req_id: int, data: dict, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    req = session.get(AppointmentPrerequisite, req_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Prerequisite not found")
+    
+    appo = session.get(Appointment, req.appointment_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Not authorized")
+        
+    for key, value in data.items():
+        if key not in ["id", "appointment_id"] and hasattr(req, key):
+            setattr(req, key, value)
+            
+    session.add(req)
+    session.commit()
+    session.refresh(req)
+    return req
+
+@router.delete("/prerequisites/{req_id}")
+def delete_prerequisite(req_id: int, user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    req = session.get(AppointmentPrerequisite, req_id)
+    if not req:
+        raise HTTPException(status_code=404, detail="Prerequisite not found")
+        
+    appo = session.get(Appointment, req.appointment_id)
+    if not appo or appo.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Not authorized")
+        
+    session.delete(req)
+    session.commit()
+    return {"message": "Prerequisite deleted successfully"}
+
+@router.post("/documents/{doc_id}/analyze")
+async def analyze_clinical_document_endpoint(
+    doc_id: int,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    doc = session.get(ClinicalDocument, doc_id)
+    if not doc or doc.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="File on disk not found")
+        
+    with open(doc.file_path, "rb") as f:
+        file_bytes = f.read()
+        
+    # Content type guess
+    ext = doc.file_path.split('.')[-1].lower()
+    if ext == "pdf":
+        mime_type = "application/pdf"
+    elif ext in ["jpg", "jpeg"]:
+        mime_type = "image/jpeg"
+    elif ext == "png":
+        mime_type = "image/png"
+    else:
+        mime_type = "application/octet-stream"
+        
+    result = await analyze_medical_document(file_bytes, mime_type, doc.title)
+    return result
 
 # --- DASHBOARD/ANALYSIS ---
 
