@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Utensils, Scale, Activity, Droplets, LogOut, MessageSquare, X, Dumbbell, Calculator, FileText, CalendarDays, Menu as MenuIcon } from 'lucide-react';
+import { Plus, Utensils, Scale, Activity, Droplets, LogOut, X, Dumbbell, Calculator, FileText, CalendarDays, Menu as MenuIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { TelegramIcon } from './icons/TelegramIcon';
 
 interface DashboardHeaderProps {
     onRegisterPeso: () => void;
@@ -149,7 +150,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                         onClick={onOpenTelegram}
                         className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl font-medium transition-colors shadow-sm"
                     >
-                        <MessageSquare className="w-4 h-4" />
+                        <TelegramIcon className="w-4 h-4" />
                         <span className="hidden sm:inline">Bot Telegram</span>
                     </button>
                 )}

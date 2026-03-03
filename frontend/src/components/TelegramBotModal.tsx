@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, MessageSquare, Copy, Check, ExternalLink, RefreshCw } from 'lucide-react';
+import { X, Copy, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import api from '../services/api';
+import { TelegramIcon } from './icons/TelegramIcon';
 
 interface TelegramBotModalProps {
     isOpen: boolean;
@@ -39,8 +40,8 @@ const TelegramBotModal: React.FC<TelegramBotModalProps> = ({ isOpen, onClose }) 
             <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                            <MessageSquare className="w-6 h-6" />
+                        <div className="w-10 h-10 bg-sky-100 rounded-xl flex items-center justify-center text-sky-500">
+                            <TelegramIcon className="w-6 h-6" />
                         </div>
                         <h2 className="text-xl font-bold text-slate-900">Configurar Telegram</h2>
                     </div>
